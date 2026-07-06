@@ -1,3 +1,5 @@
+"use client";
+
 import Container from "@/components/layout/Container";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,7 +42,11 @@ const stats = [
   },
 ];
 
-export default function Hero() {
+interface HeroProps {
+  onSearchByLotClick?: () => void; // 👈 new prop
+}
+
+export default function Hero({ onSearchByLotClick }: HeroProps) {
   return (
     <section className="relative overflow-hidden bg-background">
       {/* Background with gradient and glow */}
@@ -48,7 +54,7 @@ export default function Hero() {
       <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-brand/10 blur-3xl" />
       <div className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-amber-200/20 blur-3xl" />
 
-      <Container className="pt-8 lg:pt-10 pb-12 lg:pb-16">
+      <Container className="pt-8 lg:pt-12 pb-12 lg:pb-16">
         <div className="grid items-center gap-16 lg:grid-cols-2">
           {/* Left Content */}
           <div className="max-w-2xl">
@@ -89,7 +95,11 @@ export default function Hero() {
               </div>
 
               <div className="mt-4 flex flex-col gap-3 px-1 text-sm sm:flex-row sm:items-center sm:justify-between">
-                <button className="inline-flex items-center gap-2 font-medium text-brand hover:text-indigo-700 transition-colors cursor-pointer">
+                <button
+                  onClick={onSearchByLotClick}
+                  className="inline-flex items-center gap-2 font-medium text-brand hover:text-indigo-700 transition-colors cursor-pointer"
+                >
+                  {" "}
                   <FileText className="h-4 w-4" />
                   Search by lot number
                 </button>
@@ -144,7 +154,7 @@ export default function Hero() {
             {/* Main Report Card */}
             <div className="absolute left-0 top-8 w-[560px] rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-300/50">
               <Image
-                src="/hero-bg.png"
+                src="/hero-bg.jpg"
                 alt="Vehicle report preview"
                 width={560}
                 height={520}
