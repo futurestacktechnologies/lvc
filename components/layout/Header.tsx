@@ -1,6 +1,5 @@
 import Link from "next/link";
 import { Menu } from "lucide-react";
-
 import Container from "./Container";
 import Logo from "../common/Logo";
 import { buttonVariants } from "@/components/ui/button";

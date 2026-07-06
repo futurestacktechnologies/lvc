@@ -154,7 +154,7 @@ export default function Hero({ onSearchByLotClick }: HeroProps) {
             {/* Main Report Card */}
             <div className="absolute left-0 top-8 w-[560px] rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-300/50">
               <Image
-                src="/hero-bg.jpg"
+                src="/bg-hero.jpg"
                 alt="Vehicle report preview"
                 width={560}
                 height={520}
