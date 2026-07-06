@@ -1,0 +1,403 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum UserRole {
+  CUSTOMER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
+
+enum OtpPurpose {
+  SIGNUP
+  LOGIN
+  PHONE_CHANGE_OLD
+  PHONE_CHANGE_NEW
+}
+
+enum OtpChannel {
+  SMS
+  WHATSAPP
+  BOTH
+}
+
+enum PhoneChangeStatus {
+  PENDING_OLD_OTP
+  PENDING_NEW_OTP
+  COMPLETED
+  CANCELLED
+  EXPIRED
+}
+
+enum PaymentMethod {
+  BANK_TRANSFER
+  ONLINE_GATEWAY
+}
+
+enum PaymentStatus {
+  PENDING
+  PROOF_UPLOADED
+  VERIFIED
+  REJECTED
+  PAID
+  FAILED
+  REFUNDED
+}
+
+enum UserPackageStatus {
+  PENDING_PAYMENT
+  ACTIVE
+  EXHAUSTED
+  EXPIRED
+  CANCELLED
+}
+
+enum ReportRequestStatus {
+  NEW
+  PROCESSING
+  COMPLETED
+  DELIVERED
+  CANCELLED
+  REJECTED
+}
+
+enum ReportStatus {
+  ACTIVE
+  REPLACED
+  DELETED
+}
+
+enum NotificationType {
+  PAYMENT
+  REQUEST
+  REPORT
+  MESSAGE
+  SYSTEM
+}
+
+model User {
+  id            String     @id @default(cuid())
+  name          String
+  phone         String     @unique
+  role          UserRole   @default(CUSTOMER)
+  status        UserStatus @default(ACTIVE)
+  phoneVerified Boolean    @default(false)
+  lastLoginAt   DateTime?
+
+  requests            ReportRequest[]      @relation("CustomerRequests")
+  assignedRequests    ReportRequest[]      @relation("AssignedAdminRequests")
+  payments            Payment[]            @relation("CustomerPayments")
+  verifiedPayments    Payment[]            @relation("VerifiedPayments")
+  packages            UserPackage[]
+  reports             Report[]             @relation("CustomerReports")
+  uploadedReports     Report[]             @relation("UploadedReports")
+  otps                OtpCode[]
+  messages            Message[]            @relation("SenderMessages")
+  notifications       Notification[]
+  activityLogs        ActivityLog[]
+  phoneChangeRequests PhoneChangeRequest[]
+  sessions            UserSession[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+  @@index([status])
+  @@map("users")
+}
+
+model OtpCode {
+  id     String  @id @default(cuid())
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  phone    String
+  codeHash String
+  purpose  OtpPurpose
+  channel  OtpChannel @default(BOTH)
+
+  expiresAt    DateTime
+  usedAt       DateTime?
+  attemptCount Int       @default(0)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([phone])
+  @@index([phone, purpose])
+  @@index([expiresAt])
+  @@map("otp_codes")
+}
+
+model PhoneChangeRequest {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  oldPhone String
+  newPhone String?
+
+  status PhoneChangeStatus @default(PENDING_OLD_OTP)
+
+  oldPhoneVerifiedAt DateTime?
+  newPhoneVerifiedAt DateTime?
+  expiresAt          DateTime
+  completedAt        DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([oldPhone])
+  @@index([newPhone])
+  @@index([status])
+  @@map("phone_change_requests")
+}
+
+model PaymentPlan {
+  id             String  @id @default(cuid())
+  code           String  @unique
+  name           String
+  price          Int
+  currency       String  @default("LKR")
+  requestCredits Int
+  isActive       Boolean @default(true)
+  sortOrder      Int     @default(0)
+
+  purchases UserPackage[]
+  payments  Payment[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+  @@index([sortOrder])
+  @@map("payment_plans")
+}
+
+model UserPackage {
+  id            String @id @default(cuid())
+  packageNumber String @unique
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  planId String
+  plan   PaymentPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  totalRequests     Int
+  usedRequests      Int @default(0)
+  remainingRequests Int
+
+  status UserPackageStatus @default(PENDING_PAYMENT)
+
+  activatedAt DateTime?
+  expiresAt   DateTime?
+
+  payments Payment[]
+  requests ReportRequest[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([planId])
+  @@index([status])
+  @@map("user_packages")
+}
+
+model Payment {
+  id            String @id @default(cuid())
+  paymentNumber String @unique
+
+  customerId String
+  customer   User   @relation("CustomerPayments", fields: [customerId], references: [id], onDelete: Cascade)
+
+  planId String
+  plan   PaymentPlan @relation(fields: [planId], references: [id], onDelete: Restrict)
+
+  userPackageId String?
+  userPackage   UserPackage? @relation(fields: [userPackageId], references: [id], onDelete: SetNull)
+
+  amount   Int
+  currency String        @default("LKR")
+  method   PaymentMethod
+  status   PaymentStatus @default(PENDING)
+
+  paymentProofUrl      String?
+  paymentProofFileName String?
+  paymentProofFileType String?
+  paymentProofFileSize Int?
+
+  gatewayRef String?
+  adminNote  String?
+
+  verifiedById String?
+  verifiedBy   User?     @relation("VerifiedPayments", fields: [verifiedById], references: [id], onDelete: SetNull)
+  verifiedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([planId])
+  @@index([userPackageId])
+  @@index([status])
+  @@index([method])
+  @@map("payments")
+}
+
+model ReportRequest {
+  id            String @id @default(cuid())
+  requestNumber String @unique
+
+  customerId String
+  customer   User   @relation("CustomerRequests", fields: [customerId], references: [id], onDelete: Cascade)
+
+  userPackageId String?
+  userPackage   UserPackage? @relation(fields: [userPackageId], references: [id], onDelete: SetNull)
+
+  vehicleIdentifier String
+  lotNumber         String?
+  auctionDate       DateTime?
+  auctionPlatform   String?
+
+  status ReportRequestStatus @default(NEW)
+
+  assignedAdminId String?
+  assignedAdmin   User?   @relation("AssignedAdminRequests", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+
+  reports      Report[]
+  messages     Message[]
+  activityLogs ActivityLog[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([userPackageId])
+  @@index([status])
+  @@index([vehicleIdentifier])
+  @@index([lotNumber])
+  @@index([auctionDate])
+  @@map("report_requests")
+}
+
+model Report {
+  id String @id @default(cuid())
+
+  requestId String
+  request   ReportRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  customerId String
+  customer   User   @relation("CustomerReports", fields: [customerId], references: [id], onDelete: Cascade)
+
+  title    String
+  fileUrl  String
+  fileName String?
+  fileSize Int?
+  status   ReportStatus @default(ACTIVE)
+
+  uploadedById String?
+  uploadedBy   User?    @relation("UploadedReports", fields: [uploadedById], references: [id], onDelete: SetNull)
+  uploadedAt   DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([requestId])
+  @@index([customerId])
+  @@index([status])
+  @@map("reports")
+}
+
+model Message {
+  id String @id @default(cuid())
+
+  requestId String?
+  request   ReportRequest? @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  senderId String
+  sender   User   @relation("SenderMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  message       String
+  attachmentUrl String?
+  isRead        Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([requestId])
+  @@index([senderId])
+  @@index([isRead])
+  @@map("messages")
+}
+
+model Notification {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  type    NotificationType
+  title   String
+  message String
+  isRead  Boolean          @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([isRead])
+  @@map("notifications")
+}
+
+model ActivityLog {
+  id String @id @default(cuid())
+
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  requestId String?
+  request   ReportRequest? @relation(fields: [requestId], references: [id], onDelete: Cascade)
+
+  action      String
+  description String?
+
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([requestId])
+  @@map("activity_logs")
+}
+
+model UserSession {
+  id String @id @default(cuid())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  tokenHash String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  userAgent String?
+  ipAddress String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("user_sessions")
+}

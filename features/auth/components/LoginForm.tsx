@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { LockKeyhole, Mail } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Phone } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -12,6 +13,8 @@ import { Label } from "@/components/ui/label";
 import { loginSchema, type LoginInput } from "@/lib/validations/auth";
 
 export default function LoginForm() {
+  const router = useRouter();
+
   const {
     register,
     handleSubmit,
@@ -19,17 +22,43 @@ export default function LoginForm() {
   } = useForm<LoginInput>({
     resolver: zodResolver(loginSchema),
     defaultValues: {
-      email: "",
-      password: "",
+      phone: "",
     },
   });
 
   async function onSubmit(data: LoginInput) {
-    console.log("Login data:", data);
-
-    toast.success("Login form is valid", {
-      description: "Backend authentication will be connected later.",
+    const response = await fetch("/api/auth/login/start", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(data),
     });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      toast.error("Login failed", {
+        description: result.message || "Please check your mobile number.",
+      });
+      return;
+    }
+
+    sessionStorage.setItem(
+      "jrp_pending_auth",
+      JSON.stringify({
+        phone: data.phone,
+        type: "login",
+      }),
+    );
+
+    toast.success("OTP sent", {
+      description: result.devOtp
+        ? `Development OTP: ${result.devOtp}`
+        : "OTP sent through WhatsApp and SMS.",
+    });
+
+    router.push("/verify-otp?type=login");
   }
 
   return (
@@ -38,67 +67,43 @@ export default function LoginForm() {
         <p className="text-sm font-semibold text-brand">Welcome back</p>
 
         <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
-          Login to your account
+          Login with mobile number
         </h1>
 
         <p className="mt-3 text-sm leading-7 text-muted-foreground">
-          Access your dashboard to submit requests, track status, and download
-          completed PDF reports.
+          Enter your registered mobile number. We&apos;ll send an OTP through to
+          continue securely.
         </p>
       </div>
 
       <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
         <div className="space-y-2">
-          <Label htmlFor="email">Email address</Label>
+          <Label htmlFor="phone">Mobile number</Label>
 
           <div className="relative">
-            <Mail className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+            <Phone className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
 
             <Input
-              id="email"
-              type="email"
-              placeholder="you@example.com"
+              id="phone"
+              type="tel"
+              placeholder="+94 77 123 4567"
               className="h-12 pl-11"
-              {...register("email")}
+              {...register("phone")}
             />
           </div>
 
-          {errors.email && (
+          {errors.phone && (
             <p className="text-sm font-medium text-destructive">
-              {errors.email.message}
+              {errors.phone.message}
             </p>
           )}
-        </div>
 
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <Label htmlFor="password">Password</Label>
-
-            <Link
-              href="/forgot-password"
-              className="text-sm font-medium text-brand transition hover:text-brand/80"
-            >
-              Forgot password?
-            </Link>
-          </div>
-
-          <div className="relative">
-            <LockKeyhole className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
-
-            <Input
-              id="password"
-              type="password"
-              placeholder="Enter your password"
-              className="h-12 pl-11"
-              {...register("password")}
-            />
-          </div>
-
-          {errors.password && (
-            <p className="text-sm font-medium text-destructive">
-              {errors.password.message}
-            </p>
-          )}
+          <Link
+            href="/change-phone"
+            className="block text-right font-semibold text-brand text-sm transition hover:text-brand/80"
+          >
+            Change phone number
+          </Link>
         </div>
 
         <Button
@@ -106,7 +111,7 @@ export default function LoginForm() {
           disabled={isSubmitting}
           className="h-12 w-full text-base"
         >
-          {isSubmitting ? "Logging in..." : "Login"}
+          {isSubmitting ? "Sending OTP..." : "Send OTP"}
         </Button>
       </form>
 

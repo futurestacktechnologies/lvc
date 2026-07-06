@@ -10,6 +10,7 @@ import CTA from "@/features/home/sections/CTA";
 import SearchByLotModal, {
   SearchByLotFormData,
 } from "@/components/common/SearchByLotModal";
+import LogoutToast from "@/components/common/LogoutToast";
 
 export default function HomePage() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -29,6 +30,7 @@ export default function HomePage() {
 
   return (
     <>
+      <LogoutToast />
       <Hero onSearchByLotClick={() => setIsModalOpen(true)} />
       <HowItWorks />
       <ReportFeatures />

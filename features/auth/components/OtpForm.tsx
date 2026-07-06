@@ -3,19 +3,53 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, KeyRound, RefreshCcw, ShieldCheck } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
 import { otpSchema, type OtpInput } from "@/lib/validations/auth";
+
+const OTP_LENGTH = 5;
+
+type PendingAuth = {
+  phone: string;
+  type: "signup" | "login";
+  name?: string;
+};
+
+function getPendingAuth(): PendingAuth | null {
+  if (typeof window === "undefined") {
+    return null;
+  }
+
+  const storedValue = sessionStorage.getItem("jrp_pending_auth");
+
+  if (!storedValue) {
+    return null;
+  }
+
+  try {
+    const parsedValue = JSON.parse(storedValue) as PendingAuth;
+
+    if (!parsedValue.phone || !parsedValue.type) {
+      return null;
+    }
+
+    return parsedValue;
+  } catch {
+    return null;
+  }
+}
 
 export default function OtpForm() {
   const router = useRouter();
 
-  const [otpValues, setOtpValues] = useState<string[]>(["", "", "", "", ""]);
+  const [otpValues, setOtpValues] = useState<string[]>(
+    Array.from({ length: OTP_LENGTH }, () => ""),
+  );
+
   const inputRefs = useRef<Array<HTMLInputElement | null>>([]);
 
   const {
@@ -29,8 +63,23 @@ export default function OtpForm() {
     },
   });
 
+  useEffect(() => {
+    const pendingAuth = getPendingAuth();
+
+    if (!pendingAuth) {
+      sessionStorage.removeItem("jrp_pending_auth");
+
+      toast.error("OTP session not found", {
+        description: "Please login or register again.",
+      });
+
+      router.push("/login");
+    }
+  }, [router]);
+
   function updateOtpValue(nextValues: string[]) {
     setOtpValues(nextValues);
+
     setValue("otp", nextValues.join(""), {
       shouldValidate: true,
       shouldDirty: true,
@@ -45,7 +94,7 @@ export default function OtpForm() {
 
     updateOtpValue(nextValues);
 
-    if (digit && index < 4) {
+    if (digit && index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
   }
@@ -75,7 +124,7 @@ export default function OtpForm() {
       inputRefs.current[index - 1]?.focus();
     }
 
-    if (event.key === "ArrowRight" && index < 5) {
+    if (event.key === "ArrowRight" && index < OTP_LENGTH - 1) {
       inputRefs.current[index + 1]?.focus();
     }
   }
@@ -86,11 +135,11 @@ export default function OtpForm() {
     const pastedValue = event.clipboardData
       .getData("text")
       .replace(/\D/g, "")
-      .slice(0, 5);
+      .slice(0, OTP_LENGTH);
 
     if (!pastedValue) return;
 
-    const nextValues = ["", "", "", "", ""];
+    const nextValues = Array.from({ length: OTP_LENGTH }, () => "");
 
     pastedValue.split("").forEach((digit, index) => {
       nextValues[index] = digit;
@@ -98,23 +147,100 @@ export default function OtpForm() {
 
     updateOtpValue(nextValues);
 
-    const focusIndex = Math.min(pastedValue.length, 5) - 1;
+    const focusIndex = Math.min(pastedValue.length, OTP_LENGTH) - 1;
     inputRefs.current[focusIndex]?.focus();
   }
 
   async function onSubmit(data: OtpInput) {
-    console.log("OTP data:", data);
+    const pendingAuth = getPendingAuth();
+
+    if (!pendingAuth) {
+      toast.error("OTP session not found", {
+        description: "Please login or register again.",
+      });
+
+      router.push("/login");
+      return;
+    }
+
+    const response = await fetch("/api/auth/verify-otp", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        phone: pendingAuth.phone,
+        otp: data.otp,
+        type: pendingAuth.type,
+      }),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      toast.error("OTP verification failed", {
+        description: result.message || "Please check your OTP code.",
+      });
+      return;
+    }
+
+    sessionStorage.removeItem("jrp_pending_auth");
 
     toast.success("OTP verified successfully", {
-      description: "Backend OTP verification will be connected later.",
+      description: "You are now logged in.",
     });
 
     router.push("/dashboard");
   }
 
-  function handleResendOtp() {
+  async function handleResendOtp() {
+    const pendingAuth = getPendingAuth();
+
+    if (!pendingAuth) {
+      toast.error("OTP session not found", {
+        description: "Please login or register again.",
+      });
+
+      router.push("/login");
+      return;
+    }
+
+    const endpoint =
+      pendingAuth.type === "signup"
+        ? "/api/auth/register/start"
+        : "/api/auth/login/start";
+
+    const body =
+      pendingAuth.type === "signup"
+        ? {
+            name: pendingAuth.name || "Customer",
+            phone: pendingAuth.phone,
+          }
+        : {
+            phone: pendingAuth.phone,
+          };
+
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const result = await response.json();
+
+    if (!response.ok || !result.success) {
+      toast.error("OTP resend failed", {
+        description: result.message || "Please try again.",
+      });
+      return;
+    }
+
     toast.success("OTP resent", {
-      description: "Real OTP resend will be connected later.",
+      description: result.devOtp
+        ? `Development OTP: ${result.devOtp}`
+        : "OTP sent through WhatsApp and SMS.",
     });
   }
 
@@ -142,16 +268,14 @@ export default function OtpForm() {
         </h1>
 
         <p className="mt-3 text-sm leading-7 text-muted-foreground">
-          Enter the 5-digit OTP code sent to your email or phone number to
-          continue securely.
+          Enter the 5-digit OTP code sent to your mobile number through WhatsApp
+          and SMS.
         </p>
       </div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
+      <form onSubmit={handleSubmit(onSubmit)} className="mt-4 space-y-5">
         <div className="space-y-3">
-          <Label>OTP code</Label>
-
-          <div className="flex items-center justify-between gap-2 sm:gap-3">
+          <div className="flex gap-2 sm:gap-3">
             {otpValues.map((value, index) => (
               <input
                 key={index}
@@ -165,7 +289,7 @@ export default function OtpForm() {
                 onChange={(event) => handleOtpChange(event.target.value, index)}
                 onKeyDown={(event) => handleKeyDown(event, index)}
                 onPaste={handlePaste}
-                className="h-12 w-12 rounded-md border border-input bg-background text-center text-xl font-bold text-foreground outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 sm:h-14 sm:w-14"
+                className="h-15 w-15 rounded-md border border-input bg-background text-center text-xl font-bold text-foreground outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20 sm:h-14 sm:w-14"
               />
             ))}
           </div>

@@ -30,8 +30,9 @@ export default function AuthLayout({ children }: { children: ReactNode }) {
               </h1>
 
               <p className="mt-5 text-base leading-8 text-white/70">
-                Create an account, submit vehicle details, track payment status,
-                and download verified PDF reports from your dashboard.
+                Create an account with your mobile number, verify using OTP,
+                purchase a request package, and download verified vehicle
+                reports from your dashboard.
               </p>
             </div>
           </div>
