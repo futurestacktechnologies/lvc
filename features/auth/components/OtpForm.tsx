@@ -190,7 +190,13 @@ export default function OtpForm() {
       description: "You are now logged in.",
     });
 
-    router.push("/dashboard");
+    const userRole = result.user?.role;
+
+    if (userRole === "ADMIN" || userRole === "SUPER_ADMIN") {
+      router.push("/admin");
+    } else {
+      router.push("/dashboard");
+    }
   }
 
   async function handleResendOtp() {

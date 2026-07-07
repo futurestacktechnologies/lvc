@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requireAdminUser } from "@/lib/auth/admin";
 import { prisma } from "@/lib/prisma/client";
+import { PaymentStatus, UserPackageStatus } from "@/generated/prisma";
 
 export const runtime = "nodejs";
 
@@ -20,18 +21,45 @@ export async function POST(_request: Request, context: RouteContext) {
       where: {
         id: paymentId,
       },
-      include: {
-        userPackage: true,
+      select: {
+        id: true,
+        paymentNumber: true,
+        status: true,
+        userPackageId: true,
       },
     });
 
     if (!payment) {
-      return NextResponse.redirect(new URL("/admin/payments", _request.url));
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Payment not found.",
+        },
+        { status: 404 },
+      );
     }
 
-    if (payment.status !== "PROOF_UPLOADED") {
-      return NextResponse.redirect(new URL("/admin/payments", _request.url));
+    if (payment.status !== PaymentStatus.PROOF_UPLOADED) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Only uploaded payment proofs can be rejected.",
+        },
+        { status: 400 },
+      );
     }
+
+    if (!payment.userPackageId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "This payment is not connected to a package.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const userPackageId = payment.userPackageId;
 
     await prisma.$transaction([
       prisma.payment.update({
@@ -39,31 +67,35 @@ export async function POST(_request: Request, context: RouteContext) {
           id: payment.id,
         },
         data: {
-          status: "REJECTED",
+          status: PaymentStatus.REJECTED,
           verifiedById: admin.id,
           verifiedAt: new Date(),
           adminNote: "Payment proof rejected by admin.",
         },
       }),
-
       prisma.userPackage.update({
         where: {
-          id: payment.userPackageId!,
+          id: userPackageId,
         },
         data: {
-          status: "CANCELLED",
+          status: UserPackageStatus.CANCELLED,
         },
       }),
     ]);
 
-    return NextResponse.redirect(
-      new URL("/admin/payments?rejected=success", _request.url),
-    );
+    return NextResponse.json({
+      success: true,
+      message: `${payment.paymentNumber} has been rejected.`,
+    });
   } catch (error) {
     console.error("Payment rejection failed:", error);
 
-    return NextResponse.redirect(
-      new URL("/admin/payments?rejected=failed", _request.url),
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Something went wrong while rejecting the payment.",
+      },
+      { status: 500 },
     );
   }
 }

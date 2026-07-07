@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requireAdminUser } from "@/lib/auth/admin";
 import { prisma } from "@/lib/prisma/client";
+import { PaymentStatus, UserPackageStatus } from "@/generated/prisma";
 
 export const runtime = "nodejs";
 
@@ -20,50 +21,81 @@ export async function POST(_request: Request, context: RouteContext) {
       where: {
         id: paymentId,
       },
-      include: {
-        userPackage: true,
+      select: {
+        id: true,
+        paymentNumber: true,
+        status: true,
+        userPackageId: true,
       },
     });
 
     if (!payment) {
-      return NextResponse.redirect(new URL("/admin/payments", _request.url));
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Payment not found.",
+        },
+        { status: 404 },
+      );
     }
 
-    if (payment.status !== "PROOF_UPLOADED") {
-      return NextResponse.redirect(new URL("/admin/payments", _request.url));
+    if (payment.status !== PaymentStatus.PROOF_UPLOADED) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Only uploaded payment proofs can be approved.",
+        },
+        { status: 400 },
+      );
     }
+
+    if (!payment.userPackageId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "This payment is not connected to a package.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const userPackageId = payment.userPackageId;
 
     await prisma.$transaction([
       prisma.payment.update({
         where: {
-          id: payment.id,
+          id: userPackageId,
         },
         data: {
-          status: "VERIFIED",
+          status: PaymentStatus.VERIFIED,
           verifiedById: admin.id,
           verifiedAt: new Date(),
         },
       }),
-
       prisma.userPackage.update({
         where: {
-          id: payment.userPackageId!,
+          id: payment.userPackageId,
         },
         data: {
-          status: "ACTIVE",
+          status: UserPackageStatus.ACTIVE,
           activatedAt: new Date(),
         },
       }),
     ]);
 
-    return NextResponse.redirect(
-      new URL("/admin/payments?verified=success", _request.url),
-    );
+    return NextResponse.json({
+      success: true,
+      message: `${payment.paymentNumber} has been approved successfully.`,
+    });
   } catch (error) {
-    console.error("Payment verification failed:", error);
+    console.error("Payment approval failed:", error);
 
-    return NextResponse.redirect(
-      new URL("/admin/payments?verified=failed", _request.url),
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Something went wrong while approving the payment.",
+      },
+      { status: 500 },
     );
   }
 }

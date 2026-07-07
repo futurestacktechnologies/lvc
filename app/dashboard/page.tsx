@@ -88,21 +88,19 @@ export default async function DashboardPage() {
             Back to Home
           </Link>
 
-          {/* <form action="/api/auth/logout" method="POST">
-            <Button type="submit" variant="outline" className="cursor-pointer">
-              Logout
-            </Button>
-          </form> */}
-
           <div className="flex items-center gap-3">
             {(user.role === "ADMIN" || user.role === "SUPER_ADMIN") && (
-              <Link href="/admin/payments">
-                <Button variant="default">Admin Payments</Button>
+              <Link href="/admin">
+                <Button variant="default">Admin Dashboard</Button>
               </Link>
             )}
 
             <form action="/api/auth/logout" method="POST">
-              <Button type="submit" variant="outline">
+              <Button
+                type="submit"
+                variant="outline"
+                className="cursor-pointer"
+              >
                 Logout
               </Button>
             </form>

@@ -10,7 +10,7 @@ export async function requireAdminUser() {
   }
 
   if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
-    redirect("/dashboard");
+    redirect("/admin");
   }
 
   return user;
