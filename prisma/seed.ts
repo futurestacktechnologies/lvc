@@ -17,6 +17,18 @@ const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
 async function main() {
+  // Deactivate old package codes if they exist
+  await prisma.paymentPlan.updateMany({
+    where: {
+      code: {
+        in: ["BUSINESS_20", "ENTERPRISE_50"],
+      },
+    },
+    data: {
+      isActive: false,
+    },
+  });
+
   const plans = [
     {
       code: "STARTER_1",
@@ -35,19 +47,19 @@ async function main() {
       sortOrder: 2,
     },
     {
-      code: "BUSINESS_20",
+      code: "BUSINESS_30",
       name: "Business Pack",
       price: 20000,
       currency: "LKR",
-      requestCredits: 20,
+      requestCredits: 30,
       sortOrder: 3,
     },
     {
-      code: "ENTERPRISE_50",
+      code: "ENTERPRISE_100",
       name: "Enterprise Pack",
       price: 50000,
       currency: "LKR",
-      requestCredits: 50,
+      requestCredits: 100,
       sortOrder: 4,
     },
   ];

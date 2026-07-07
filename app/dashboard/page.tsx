@@ -1,13 +1,20 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
-import { FileText, Package, Phone, UserRound } from "lucide-react";
+import {
+  Clock3,
+  CreditCard,
+  FileText,
+  Package,
+  Phone,
+  UserRound,
+  ArrowLeft,
+} from "lucide-react";
+import { buttonVariants } from "@/components/ui/button";
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
 
 export default async function DashboardPage() {
   const user = await getCurrentUser();
@@ -16,14 +23,19 @@ export default async function DashboardPage() {
     redirect("/login");
   }
 
-  const [activePackages, recentRequests, totalRequests] = await Promise.all([
+  const [userPackages, recentRequests, totalRequests] = await Promise.all([
     prisma.userPackage.findMany({
       where: {
         userId: user.id,
-        status: "ACTIVE",
       },
       include: {
         plan: true,
+        payments: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+        },
       },
       orderBy: {
         createdAt: "desc",
@@ -47,10 +59,17 @@ export default async function DashboardPage() {
     }),
   ]);
 
-  const totalRemainingRequests = activePackages.reduce(
-    (total, userPackage) => total + userPackage.remainingRequests,
-    0,
-  );
+  const totalRemainingRequests = userPackages.reduce((total, userPackage) => {
+    if (userPackage.status !== "ACTIVE") {
+      return total;
+    }
+
+    return total + userPackage.remainingRequests;
+  }, 0);
+
+  const pendingPayments = userPackages.filter(
+    (userPackage) => userPackage.status === "PENDING_PAYMENT",
+  ).length;
 
   return (
     <main className="min-h-screen bg-muted/40">
@@ -58,7 +77,7 @@ export default async function DashboardPage() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
           <div>
             <p className="text-sm font-medium text-muted-foreground">
-              Dashboard
+              Customer Dashboard
             </p>
             <h1 className="mt-1 text-2xl font-bold tracking-tight text-foreground">
               Welcome, {user.name}
@@ -68,16 +87,31 @@ export default async function DashboardPage() {
             <ArrowLeft className="ml-2 h-4 w-4" />
             Back to Home
           </Link>
-          <form action="/api/auth/logout" method="POST">
-            <Button type="submit" variant="outline">
+
+          {/* <form action="/api/auth/logout" method="POST">
+            <Button type="submit" variant="outline" className="cursor-pointer">
               Logout
             </Button>
-          </form>
+          </form> */}
+
+          <div className="flex items-center gap-3">
+            {(user.role === "ADMIN" || user.role === "SUPER_ADMIN") && (
+              <Link href="/admin/payments">
+                <Button variant="default">Admin Payments</Button>
+              </Link>
+            )}
+
+            <form action="/api/auth/logout" method="POST">
+              <Button type="submit" variant="outline">
+                Logout
+              </Button>
+            </form>
+          </div>
         </div>
       </header>
 
       <section className="mx-auto max-w-7xl px-6 py-8">
-        <div className="grid gap-5 md:grid-cols-3">
+        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm font-medium">
@@ -111,6 +145,21 @@ export default async function DashboardPage() {
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0">
               <CardTitle className="text-sm font-medium">
+                Pending Payments
+              </CardTitle>
+              <Clock3 className="h-5 w-5 text-brand" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{pendingPayments}</div>
+              <p className="mt-1 text-sm text-muted-foreground">
+                Waiting for admin verification
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <CardTitle className="text-sm font-medium">
                 Total Requests
               </CardTitle>
               <FileText className="h-5 w-5 text-brand" />
@@ -129,6 +178,7 @@ export default async function DashboardPage() {
             <CardHeader>
               <CardTitle>Account Details</CardTitle>
             </CardHeader>
+
             <CardContent className="space-y-4">
               <div>
                 <p className="text-sm text-muted-foreground">Name</p>
@@ -152,66 +202,93 @@ export default async function DashboardPage() {
 
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Active Payment Packages</CardTitle>
+              <CardTitle>Payment Packages</CardTitle>
             </CardHeader>
+
             <CardContent>
-              {activePackages.length === 0 ? (
+              {userPackages.length === 0 ? (
                 <div className="rounded-2xl border border-dashed border-border p-6 text-center">
                   <p className="font-semibold text-foreground">
-                    No active package yet
+                    No package selected yet
                   </p>
                   <p className="mt-2 text-sm text-muted-foreground">
                     Select a payment plan to start requesting vehicle reports.
                   </p>
 
-                  <Button className="mt-5">View Payment Plans</Button>
+                  <Link href="/payment-plans">
+                    <Button className="mt-5 cursor-pointer">
+                      View Payment Plans
+                    </Button>
+                  </Link>
                 </div>
               ) : (
                 <div className="space-y-4">
-                  {activePackages.map((userPackage) => (
-                    <div
-                      key={userPackage.id}
-                      className="rounded-2xl border border-border p-4"
-                    >
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <p className="font-semibold text-foreground">
-                            {userPackage.plan.name}
-                          </p>
-                          <p className="mt-1 text-sm text-muted-foreground">
-                            Package No: {userPackage.packageNumber}
-                          </p>
+                  {userPackages.map((userPackage) => {
+                    const latestPayment = userPackage.payments[0];
+
+                    return (
+                      <div
+                        key={userPackage.id}
+                        className="rounded-2xl border border-border p-4"
+                      >
+                        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+                          <div>
+                            <p className="font-semibold text-foreground">
+                              {userPackage.plan.name}
+                            </p>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                              Package No: {userPackage.packageNumber}
+                            </p>
+                          </div>
+
+                          <PackageStatusBadge status={userPackage.status} />
                         </div>
 
-                        <Badge>{userPackage.status}</Badge>
+                        <div className="mt-5 grid gap-3 sm:grid-cols-3">
+                          <PackageStat
+                            label="Total"
+                            value={userPackage.totalRequests}
+                          />
+                          <PackageStat
+                            label="Used"
+                            value={userPackage.usedRequests}
+                          />
+                          <PackageStat
+                            label="Remaining"
+                            value={
+                              userPackage.status === "ACTIVE"
+                                ? userPackage.remainingRequests
+                                : 0
+                            }
+                          />
+                        </div>
+
+                        {latestPayment && (
+                          <div className="mt-5 rounded-2xl bg-muted p-4">
+                            <div className="flex items-start gap-3">
+                              <CreditCard className="mt-0.5 h-5 w-5 text-brand" />
+
+                              <div>
+                                <p className="text-sm font-semibold text-foreground">
+                                  Payment Status
+                                </p>
+                                <p className="mt-1 text-sm text-muted-foreground">
+                                  {latestPayment.paymentNumber} —{" "}
+                                  {latestPayment.status.replaceAll("_", " ")}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
+                    );
+                  })}
 
-                      <div className="mt-4 grid gap-3 sm:grid-cols-3">
-                        <div>
-                          <p className="text-xs text-muted-foreground">Total</p>
-                          <p className="font-semibold">
-                            {userPackage.totalRequests}
-                          </p>
-                        </div>
-
-                        <div>
-                          <p className="text-xs text-muted-foreground">Used</p>
-                          <p className="font-semibold">
-                            {userPackage.usedRequests}
-                          </p>
-                        </div>
-
-                        <div>
-                          <p className="text-xs text-muted-foreground">
-                            Remaining
-                          </p>
-                          <p className="font-semibold">
-                            {userPackage.remainingRequests}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
+                  <Link href="/payment-plans">
+                    <Button variant="outline" className="mt-2 cursor-pointer">
+                      Buy Another Package
+                    </Button>
+                  </Link>
                 </div>
               )}
             </CardContent>
@@ -222,6 +299,7 @@ export default async function DashboardPage() {
           <CardHeader>
             <CardTitle>Recent Report Requests</CardTitle>
           </CardHeader>
+
           <CardContent>
             {recentRequests.length === 0 ? (
               <div className="rounded-2xl border border-dashed border-border p-6 text-center">
@@ -232,7 +310,17 @@ export default async function DashboardPage() {
                   Your vehicle report requests will appear here.
                 </p>
 
-                <Button className="mt-5">Request Report</Button>
+                {totalRemainingRequests > 0 ? (
+                  <Button className="mt-5 cursor-pointer">
+                    Request Report
+                  </Button>
+                ) : (
+                  <Link href="/payment-plans">
+                    <Button className="mt-5 cursor-pointer">
+                      Buy Package First
+                    </Button>
+                  </Link>
+                )}
               </div>
             ) : (
               <div className="space-y-4">
@@ -260,4 +348,35 @@ export default async function DashboardPage() {
       </section>
     </main>
   );
+}
+
+function PackageStat({ label, value }: { label: string; value: number }) {
+  return (
+    <div>
+      <p className="text-xs text-muted-foreground">{label}</p>
+      <p className="font-semibold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function PackageStatusBadge({ status }: { status: string }) {
+  const label = status.replaceAll("_", " ");
+
+  if (status === "ACTIVE") {
+    return <Badge className="bg-success text-white">{label}</Badge>;
+  }
+
+  if (status === "PENDING_PAYMENT") {
+    return <Badge className="bg-warning text-white">{label}</Badge>;
+  }
+
+  if (status === "EXHAUSTED") {
+    return <Badge variant="outline">{label}</Badge>;
+  }
+
+  if (status === "CANCELLED") {
+    return <Badge variant="destructive">{label}</Badge>;
+  }
+
+  return <Badge variant="outline">{label}</Badge>;
 }
