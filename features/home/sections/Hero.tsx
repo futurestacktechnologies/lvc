@@ -49,13 +49,55 @@ interface HeroProps {
   onSearchByLotClick?: () => void; // 👈 new prop
 }
 
-export default function Hero({ onSearchByLotClick }: HeroProps) {
+export default function Hero({}: HeroProps) {
   const router = useRouter();
+  const [searchMode, setSearchMode] = useState<"chassis" | "auction">(
+    "chassis",
+  );
+
   const [vehicleIdentifier, setVehicleIdentifier] = useState("");
+  const [lotNumber, setLotNumber] = useState("");
+  const [auctionDate, setAuctionDate] = useState("");
+  const [auctionPlatform, setAuctionPlatform] = useState("");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleVehicleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    const hasVehicleIdentifier = vehicleIdentifier.trim().length > 0;
+
+    if (searchMode === "chassis") {
+      if (!hasVehicleIdentifier) {
+        toast.error("Chassis/VIN required", {
+          description: "Please enter chassis number or VIN.",
+        });
+        return;
+      }
+    }
+
+    if (searchMode === "auction") {
+      if (!lotNumber.trim()) {
+        toast.error("Lot number required", {
+          description: "Please enter the auction lot number.",
+        });
+        return;
+      }
+
+      if (!auctionDate.trim()) {
+        toast.error("Auction date required", {
+          description: "Please select the auction date.",
+        });
+        return;
+      }
+
+      if (!auctionPlatform.trim()) {
+        toast.error("Auction platform required", {
+          description: "Please enter auction platform.",
+        });
+        return;
+      }
+    }
 
     try {
       setIsSubmitting(true);
@@ -66,10 +108,10 @@ export default function Hero({ onSearchByLotClick }: HeroProps) {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          vehicleIdentifier,
-          lotNumber: "",
-          auctionDate: "",
-          auctionPlatform: "",
+          vehicleIdentifier: searchMode === "chassis" ? vehicleIdentifier : "",
+          lotNumber: searchMode === "auction" ? lotNumber : "",
+          auctionDate: searchMode === "auction" ? auctionDate : "",
+          auctionPlatform: searchMode === "auction" ? auctionPlatform : "",
         }),
       });
 
@@ -96,7 +138,8 @@ export default function Hero({ onSearchByLotClick }: HeroProps) {
         description: result.message,
       });
 
-      router.push("/dashboard");
+      router.push("/dashboard/report-requests");
+      router.refresh();
     } catch {
       toast.error("Request failed", {
         description: "Something went wrong. Please try again.",
@@ -137,42 +180,107 @@ export default function Hero({ onSearchByLotClick }: HeroProps) {
 
             {/* Search Card with glass effect */}
             <div className="mt-8 max-w-2xl rounded-3xl border border-slate-200/80 bg-white/80 p-6 shadow-2xl shadow-slate-200/60 backdrop-blur-sm">
-              <form
-                onSubmit={handleVehicleSearch}
-                className="flex flex-col gap-3 sm:flex-row"
-              >
-                <div className="relative flex-1">
-                  <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
-                  <Input
-                    value={vehicleIdentifier}
-                    onChange={(event) =>
-                      setVehicleIdentifier(event.target.value)
-                    }
-                    placeholder="Enter Chassis Number or VIN"
-                    className="h-14 rounded-2xl border-slate-200 bg-slate-50/80 pl-11 text-base shadow-none focus:ring-2 focus:ring-brand/50"
-                  />
+              <form onSubmit={handleVehicleSearch} className="space-y-4">
+                <div className="flex rounded-2xl bg-slate-100 p-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchMode("chassis");
+                      setLotNumber("");
+                      setAuctionDate("");
+                      setAuctionPlatform("");
+                    }}
+                    className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition cursor-pointer ${
+                      searchMode === "chassis"
+                        ? "bg-white text-brand shadow-sm"
+                        : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    Chassis / VIN
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSearchMode("auction");
+                      setVehicleIdentifier("");
+                    }}
+                    className={`flex-1 rounded-xl px-4 py-2 text-sm font-semibold transition cursor-pointer ${
+                      searchMode === "auction"
+                        ? "bg-white text-brand shadow-sm"
+                        : "text-slate-500 hover:text-slate-900"
+                    }`}
+                  >
+                    Lot / Auction
+                  </button>
                 </div>
 
-                <Button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="h-14 rounded-2xl bg-brand px-7 text-base font-semibold shadow-lg shadow-brand/30 hover:bg-brand/90 hover:shadow-brand/40 transition-all duration-300 cursor-pointer"
-                >
-                  {isSubmitting ? "Submitting..." : "Check Report"}
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
+                {searchMode === "chassis" ? (
+                  <div className="flex flex-col gap-3 sm:flex-row">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
+
+                      <Input
+                        value={vehicleIdentifier}
+                        onChange={(event) =>
+                          setVehicleIdentifier(event.target.value)
+                        }
+                        placeholder="Enter Chassis Number or VIN"
+                        className="h-14 rounded-2xl border-slate-200 bg-slate-50/80 pl-11 text-base shadow-none focus:ring-2 focus:ring-brand/50"
+                      />
+                    </div>
+
+                    <Button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="h-14 rounded-2xl bg-brand px-7 text-base font-semibold shadow-lg shadow-brand/30 transition-all duration-300 hover:bg-brand/90 hover:shadow-brand/40 cursor-pointer"
+                    >
+                      {isSubmitting ? "Submitting..." : "Check Report"}
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <Input
+                        value={lotNumber}
+                        onChange={(event) => setLotNumber(event.target.value)}
+                        placeholder="Enter Lot Number"
+                        className="h-14 rounded-2xl border-slate-200 bg-slate-50/80 text-base shadow-none focus:ring-2 focus:ring-brand/50"
+                      />
+
+                      <Input
+                        type="date"
+                        value={auctionDate}
+                        onChange={(event) => setAuctionDate(event.target.value)}
+                        className="h-14 rounded-2xl border-slate-200 bg-slate-50/80 text-base shadow-none focus:ring-2 focus:ring-brand/50"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-3 sm:flex-row">
+                      <Input
+                        value={auctionPlatform}
+                        onChange={(event) =>
+                          setAuctionPlatform(event.target.value)
+                        }
+                        placeholder="Auction Platform: USS Tokyo, TAA, JU, CAA"
+                        className="h-14 rounded-2xl border-slate-200 bg-slate-50/80 text-base shadow-none focus:ring-2 focus:ring-brand/50"
+                      />
+
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting}
+                        className="h-14 rounded-2xl bg-brand px-7 text-base font-semibold shadow-lg shadow-brand/30 transition-all duration-300 hover:bg-brand/90 hover:shadow-brand/40 cursor-pointer"
+                      >
+                        {isSubmitting ? "Submitting..." : "Check Report"}
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </form>
 
               <div className="mt-4 flex flex-col gap-3 px-1 text-sm sm:flex-row sm:items-center sm:justify-between">
-                <button
-                  onClick={onSearchByLotClick}
-                  className="inline-flex items-center gap-2 font-medium text-brand hover:text-indigo-700 transition-colors cursor-pointer"
-                >
-                  {" "}
-                  <FileText className="h-4 w-4" />
-                  Search by lot number
-                </button>
-
                 <button className="inline-flex items-center gap-2 font-medium text-brand hover:text-indigo-700 transition-colors cursor-pointer">
                   <Download className="h-4 w-4" />
                   See report sample

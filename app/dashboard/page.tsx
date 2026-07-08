@@ -153,6 +153,11 @@ export default async function DashboardPage() {
                 <Button variant="default">Admin Dashboard</Button>
               </Link>
             )}
+            <Link href="/dashboard/reports">
+              <Button variant="outline" className="cursor-pointer">
+                My Reports
+              </Button>
+            </Link>
 
             <form action="/api/auth/logout" method="POST">
               <Button
@@ -355,7 +360,15 @@ export default async function DashboardPage() {
         <Card className="mt-8">
           <CardHeader>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>Recent Report Requests</CardTitle>
+              <div>
+                <CardTitle>Recent Report Requests</CardTitle>
+                <Link
+                  href="/dashboard/report-requests"
+                  className="mt-1 inline-flex text-sm font-medium text-brand hover:underline"
+                >
+                  View all requests
+                </Link>
+              </div>
 
               {totalRemainingRequests > 0 ? (
                 <Link href="/dashboard/report-requests/new">
