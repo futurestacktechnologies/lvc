@@ -295,7 +295,27 @@ export default async function DashboardPage() {
 
         <Card className="mt-8">
           <CardHeader>
-            <CardTitle>Recent Report Requests</CardTitle>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <CardTitle>Recent Report Requests</CardTitle>
+
+              {totalRemainingRequests > 0 ? (
+                <Link href="/dashboard/report-requests/new">
+                  <Button size="sm" className="cursor-pointer rounded-xl">
+                    New Report
+                  </Button>
+                </Link>
+              ) : (
+                <Link href="/payment-plans">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="cursor-pointer rounded-xl"
+                  >
+                    Buy a Package
+                  </Button>
+                </Link>
+              )}
+            </div>
           </CardHeader>
 
           <CardContent>
@@ -307,18 +327,6 @@ export default async function DashboardPage() {
                 <p className="mt-2 text-sm text-muted-foreground">
                   Your vehicle report requests will appear here.
                 </p>
-
-                {totalRemainingRequests > 0 ? (
-                  <Button className="mt-5 cursor-pointer">
-                    Request Report
-                  </Button>
-                ) : (
-                  <Link href="/payment-plans">
-                    <Button className="mt-5 cursor-pointer">
-                      Buy Package First
-                    </Button>
-                  </Link>
-                )}
               </div>
             ) : (
               <div className="space-y-4">

@@ -223,8 +223,7 @@ export default async function AdminPaymentsPage({
             Manage Payments
           </h1>
           <span className="text-sm text-muted-foreground">
-            {filteredPaymentsCount} payment
-            {filteredPaymentsCount !== 1 ? "s" : ""} found
+            Track, verify, and manage all customer payments seamlessly.
           </span>
         </div>
       </div>

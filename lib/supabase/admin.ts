@@ -14,6 +14,8 @@ if (!supabaseServiceRoleKey) {
 export const PAYMENT_PROOF_BUCKET =
   process.env.SUPABASE_PAYMENT_PROOF_BUCKET || "payment-proofs";
 
+export const REPORT_BUCKET = process.env.SUPABASE_REPORT_BUCKET || "reports";
+
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
   auth: {
     persistSession: false,

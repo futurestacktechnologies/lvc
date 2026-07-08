@@ -64,7 +64,7 @@ export async function POST(_request: Request, context: RouteContext) {
     await prisma.$transaction([
       prisma.payment.update({
         where: {
-          id: userPackageId,
+          id: payment.id,
         },
         data: {
           status: PaymentStatus.VERIFIED,
@@ -72,9 +72,10 @@ export async function POST(_request: Request, context: RouteContext) {
           verifiedAt: new Date(),
         },
       }),
+
       prisma.userPackage.update({
         where: {
-          id: payment.userPackageId,
+          id: userPackageId,
         },
         data: {
           status: UserPackageStatus.ACTIVE,

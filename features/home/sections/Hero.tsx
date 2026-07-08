@@ -1,5 +1,8 @@
 "use client";
 
+import { FormEvent, useState } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "sonner";
 import Container from "@/components/layout/Container";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -47,6 +50,61 @@ interface HeroProps {
 }
 
 export default function Hero({ onSearchByLotClick }: HeroProps) {
+  const router = useRouter();
+  const [vehicleIdentifier, setVehicleIdentifier] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleVehicleSearch(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+
+    try {
+      setIsSubmitting(true);
+
+      const response = await fetch("/api/report-requests", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          vehicleIdentifier,
+          lotNumber: "",
+          auctionDate: "",
+          auctionPlatform: "",
+        }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok || !result.success) {
+        if (result.code === "UNAUTHENTICATED") {
+          toast.error("Login required", {
+            description: "Please login before submitting a report request.",
+          });
+
+          router.push("/login");
+          return;
+        }
+
+        toast.error("Request failed", {
+          description: result.message || "Please check your vehicle details.",
+        });
+
+        return;
+      }
+
+      toast.success("Request submitted", {
+        description: result.message,
+      });
+
+      router.push("/dashboard");
+    } catch {
+      toast.error("Request failed", {
+        description: "Something went wrong. Please try again.",
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
   return (
     <section className="relative overflow-hidden bg-background">
       {/* Background with gradient and glow */}
@@ -79,20 +137,31 @@ export default function Hero({ onSearchByLotClick }: HeroProps) {
 
             {/* Search Card with glass effect */}
             <div className="mt-8 max-w-2xl rounded-3xl border border-slate-200/80 bg-white/80 p-6 shadow-2xl shadow-slate-200/60 backdrop-blur-sm">
-              <div className="flex flex-col gap-3 sm:flex-row">
+              <form
+                onSubmit={handleVehicleSearch}
+                className="flex flex-col gap-3 sm:flex-row"
+              >
                 <div className="relative flex-1">
                   <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-400" />
                   <Input
+                    value={vehicleIdentifier}
+                    onChange={(event) =>
+                      setVehicleIdentifier(event.target.value)
+                    }
                     placeholder="Enter Chassis Number or VIN"
                     className="h-14 rounded-2xl border-slate-200 bg-slate-50/80 pl-11 text-base shadow-none focus:ring-2 focus:ring-brand/50"
                   />
                 </div>
 
-                <Button className="h-14 rounded-2xl bg-brand px-7 text-base font-semibold shadow-lg shadow-brand/30 hover:bg-brand/90 hover:shadow-brand/40 transition-all duration-300 cursor-pointer">
-                  Check Report
+                <Button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="h-14 rounded-2xl bg-brand px-7 text-base font-semibold shadow-lg shadow-brand/30 hover:bg-brand/90 hover:shadow-brand/40 transition-all duration-300 cursor-pointer"
+                >
+                  {isSubmitting ? "Submitting..." : "Check Report"}
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Button>
-              </div>
+              </form>
 
               <div className="mt-4 flex flex-col gap-3 px-1 text-sm sm:flex-row sm:items-center sm:justify-between">
                 <button
