@@ -19,13 +19,11 @@ export async function POST(request: Request, context: RouteContext) {
 
     const formData = await request.formData();
     const status = formData.get("status");
+    const reason = formData.get("reason");
 
     if (
-      status !== ReportRequestStatus.NEW &&
       status !== ReportRequestStatus.PROCESSING &&
-      status !== ReportRequestStatus.COMPLETED &&
       status !== ReportRequestStatus.DELIVERED &&
-      status !== ReportRequestStatus.CANCELLED &&
       status !== ReportRequestStatus.REJECTED
     ) {
       return NextResponse.json(
@@ -45,6 +43,12 @@ export async function POST(request: Request, context: RouteContext) {
         id: true,
         requestNumber: true,
         status: true,
+        customerId: true,
+        reports: {
+          select: {
+            id: true,
+          },
+        },
       },
     });
 
@@ -58,8 +62,34 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    await prisma.$transaction([
-      prisma.reportRequest.update({
+    if (
+      status === ReportRequestStatus.DELIVERED &&
+      reportRequest.reports.length === 0
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "Please upload the PDF report before marking this request as delivered.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (status === ReportRequestStatus.REJECTED) {
+      if (typeof reason !== "string" || reason.trim().length < 5) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: "Please enter a valid rejection reason.",
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    await prisma.$transaction(async (tx) => {
+      await tx.reportRequest.update({
         where: {
           id: requestId,
         },
@@ -68,21 +98,48 @@ export async function POST(request: Request, context: RouteContext) {
           assignedAdminId:
             status === ReportRequestStatus.PROCESSING ? admin.id : undefined,
         },
-      }),
+      });
 
-      prisma.activityLog.create({
+      await tx.activityLog.create({
         data: {
           userId: admin.id,
           requestId,
           action: "REPORT_REQUEST_STATUS_UPDATED",
           description: `${reportRequest.requestNumber} status changed from ${reportRequest.status} to ${status}.`,
         },
-      }),
-    ]);
+      });
+
+      if (
+        status === ReportRequestStatus.REJECTED &&
+        typeof reason === "string"
+      ) {
+        await tx.message.create({
+          data: {
+            requestId,
+            senderId: admin.id,
+            message: `Your report request ${reportRequest.requestNumber} was rejected. Reason: ${reason.trim()}`,
+          },
+        });
+
+        await tx.activityLog.create({
+          data: {
+            userId: admin.id,
+            requestId,
+            action: "REPORT_REQUEST_REJECTED_REASON",
+            description: reason.trim(),
+          },
+        });
+      }
+    });
 
     return NextResponse.json({
       success: true,
-      message: `${reportRequest.requestNumber} status updated to ${status}.`,
+      message:
+        status === ReportRequestStatus.PROCESSING
+          ? `${reportRequest.requestNumber} moved to processing.`
+          : status === ReportRequestStatus.DELIVERED
+            ? `${reportRequest.requestNumber} has been delivered.`
+            : `${reportRequest.requestNumber} has been rejected.`,
     });
   } catch (error) {
     console.error("Report request status update failed:", error);

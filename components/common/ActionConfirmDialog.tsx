@@ -18,6 +18,14 @@ import {
 
 type ButtonVariant = React.ComponentProps<typeof Button>["variant"];
 
+type TextareaField = {
+  name: string;
+  label: string;
+  placeholder?: string;
+  required?: boolean;
+  minLength?: number;
+};
+
 type ActionConfirmDialogProps = {
   trigger: React.ReactNode;
   title: string;
@@ -27,6 +35,7 @@ type ActionConfirmDialogProps = {
   confirmVariant?: ButtonVariant;
   actionUrl: string;
   hiddenFields?: Record<string, string>;
+  textareaField?: TextareaField;
   icon?: React.ReactNode;
   successTitle?: string;
   successDescription?: string;
@@ -42,6 +51,7 @@ export default function ActionConfirmDialog({
   confirmVariant = "default",
   actionUrl,
   hiddenFields = {},
+  textareaField,
   icon,
   successTitle = "Action completed",
   successDescription = "The action has been completed successfully.",
@@ -50,10 +60,28 @@ export default function ActionConfirmDialog({
   const router = useRouter();
 
   const [open, setOpen] = useState(false);
+  const [textareaValue, setTextareaValue] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function handleConfirm() {
     try {
+      if (textareaField?.required && !textareaValue.trim()) {
+        toast.error(`${textareaField.label} required`, {
+          description: "Please enter a value before continuing.",
+        });
+        return;
+      }
+
+      if (
+        textareaField?.minLength &&
+        textareaValue.trim().length < textareaField.minLength
+      ) {
+        toast.error(`${textareaField.label} is too short`, {
+          description: `Please enter at least ${textareaField.minLength} characters.`,
+        });
+        return;
+      }
+
       setIsSubmitting(true);
 
       const formData = new FormData();
@@ -61,6 +89,10 @@ export default function ActionConfirmDialog({
       Object.entries(hiddenFields).forEach(([name, value]) => {
         formData.append(name, value);
       });
+
+      if (textareaField) {
+        formData.append(textareaField.name, textareaValue.trim());
+      }
 
       const response = await fetch(actionUrl, {
         method: "POST",
@@ -84,6 +116,7 @@ export default function ActionConfirmDialog({
       });
 
       setOpen(false);
+      setTextareaValue("");
       router.refresh();
     } catch {
       toast.error(errorTitle, {
@@ -113,6 +146,21 @@ export default function ActionConfirmDialog({
               {description}
             </AlertDialogDescription>
           </AlertDialogHeader>
+
+          {textareaField && (
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-foreground">
+                {textareaField.label}
+              </label>
+
+              <textarea
+                value={textareaValue}
+                onChange={(event) => setTextareaValue(event.target.value)}
+                placeholder={textareaField.placeholder}
+                className="min-h-28 w-full rounded-2xl border border-border bg-background px-4 py-3 text-sm outline-none transition focus:border-brand focus:ring-2 focus:ring-brand/20"
+              />
+            </div>
+          )}
 
           <AlertDialogFooter>
             <Button

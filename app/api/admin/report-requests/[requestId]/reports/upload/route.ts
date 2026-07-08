@@ -138,16 +138,6 @@ export async function POST(request: Request, context: RouteContext) {
         },
       }),
 
-      prisma.reportRequest.update({
-        where: {
-          id: reportRequest.id,
-        },
-        data: {
-          status: ReportRequestStatus.DELIVERED,
-          assignedAdminId: admin.id,
-        },
-      }),
-
       prisma.activityLog.create({
         data: {
           userId: admin.id,
@@ -160,7 +150,8 @@ export async function POST(request: Request, context: RouteContext) {
 
     return NextResponse.json({
       success: true,
-      message: "PDF report uploaded successfully.",
+      message:
+        "PDF report uploaded successfully. You can now mark this request as delivered.",
     });
   } catch (error) {
     console.error("Report upload failed:", error);

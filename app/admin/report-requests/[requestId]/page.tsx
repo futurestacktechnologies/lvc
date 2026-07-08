@@ -1,24 +1,13 @@
-import Link from "next/link";
 import { REPORT_BUCKET, supabaseAdmin } from "@/lib/supabase/admin";
 import ReportUploadForm from "@/components/admin/ReportUploadForm";
 import { notFound } from "next/navigation";
-import {
-  ArrowLeft,
-  CalendarDays,
-  CheckCircle2,
-  ExternalLink,
-  FileText,
-  LoaderCircle,
-  ShieldAlert,
-  UserRound,
-  XCircle,
-} from "lucide-react";
+import { CalendarDays, ExternalLink, FileText, UserRound } from "lucide-react";
 import { prisma } from "@/lib/prisma/client";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import ActionConfirmDialog from "@/components/common/ActionConfirmDialog";
 import { ReportRequestStatus } from "@/generated/prisma";
+import ReportRequestActions from "@/components/admin/ReportRequestActions";
+import CreateReportDialog from "@/components/admin/CreateReportDialog";
 
 type ReportRequestDetailsPageProps = {
   params: Promise<{
@@ -99,14 +88,6 @@ export default async function ReportRequestDetailsPage({
     <div className="space-y-8">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
-          <Link
-            href="/admin/report-requests"
-            className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-brand"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to report requests
-          </Link>
-
           <h1 className="mt-4 text-3xl font-bold tracking-tight text-foreground">
             {request.requestNumber}
           </h1>
@@ -225,92 +206,70 @@ export default async function ReportRequestDetailsPage({
           <CardHeader>
             <CardTitle>Admin Actions</CardTitle>
           </CardHeader>
-
-          <CardContent className="space-y-3">
-            {request.status === ReportRequestStatus.NEW && (
-              <ActionConfirmDialog
-                title="Start processing this request?"
-                description={`Are you sure you want to start processing ${request.requestNumber}? This request will be assigned to you.`}
-                confirmLabel="Yes, Start Processing"
-                confirmVariant="default"
-                actionUrl={`/api/admin/report-requests/${request.id}/status`}
-                hiddenFields={{
-                  status: ReportRequestStatus.PROCESSING,
-                }}
-                successTitle="Request updated"
-                successDescription="Report request has been moved to processing."
-                errorTitle="Update failed"
-                icon={<LoaderCircle className="h-6 w-6" />}
-                trigger={
-                  <Button type="button" className="w-full cursor-pointer">
-                    <LoaderCircle className="mr-2 h-4 w-4" />
-                    Mark as Processing
-                  </Button>
-                }
-              />
-            )}
-
-            {request.status === ReportRequestStatus.PROCESSING && (
-              <ActionConfirmDialog
-                title="Mark this request as completed?"
-                description={`Are you sure you want to mark ${request.requestNumber} as completed?`}
-                confirmLabel="Yes, Mark Completed"
-                confirmVariant="default"
-                actionUrl={`/api/admin/report-requests/${request.id}/status`}
-                hiddenFields={{
-                  status: ReportRequestStatus.COMPLETED,
-                }}
-                successTitle="Request completed"
-                successDescription="Report request has been marked as completed."
-                errorTitle="Update failed"
-                icon={<CheckCircle2 className="h-6 w-6" />}
-                trigger={
-                  <Button type="button" className="w-full cursor-pointer">
-                    <CheckCircle2 className="mr-2 h-4 w-4" />
-                    Mark as Completed
-                  </Button>
-                }
-              />
-            )}
-
-            {request.status !== ReportRequestStatus.REJECTED &&
-              request.status !== ReportRequestStatus.CANCELLED &&
-              request.status !== ReportRequestStatus.DELIVERED && (
-                <ActionConfirmDialog
-                  title="Reject this request?"
-                  description={`Are you sure you want to reject ${request.requestNumber}? This action should only be used when the request cannot be processed.`}
-                  confirmLabel="Yes, Reject Request"
-                  confirmVariant="destructive"
-                  actionUrl={`/api/admin/report-requests/${request.id}/status`}
-                  hiddenFields={{
-                    status: ReportRequestStatus.REJECTED,
-                  }}
-                  successTitle="Request rejected"
-                  successDescription="Report request has been rejected."
-                  errorTitle="Reject failed"
-                  icon={<ShieldAlert className="h-6 w-6" />}
-                  trigger={
-                    <Button
-                      type="button"
-                      variant="outline"
-                      className="w-full cursor-pointer border-destructive text-destructive hover:bg-destructive/10"
-                    >
-                      <XCircle className="mr-2 h-4 w-4" />
-                      Reject Request
-                    </Button>
-                  }
-                />
-              )}
+          <CardContent className="space-y-5">
+            <ReportRequestActions
+              requestId={request.id}
+              requestNumber={request.requestNumber}
+              status={request.status}
+              uploadedReportsCount={reportsWithSignedUrls.length}
+            />
 
             <div className="rounded-2xl border border-border p-4">
               <p className="mb-4 text-sm font-semibold text-foreground">
                 Upload final PDF report
               </p>
 
-              <ReportUploadForm
-                requestId={request.id}
-                requestNumber={request.requestNumber}
-              />
+              {request.status === ReportRequestStatus.PROCESSING ? (
+                <ReportUploadForm
+                  requestId={request.id}
+                  requestNumber={request.requestNumber}
+                />
+              ) : request.status === ReportRequestStatus.NEW ? (
+                <p className="text-sm text-muted-foreground">
+                  Start processing this request before uploading the final PDF
+                  report.
+                </p>
+              ) : request.status === ReportRequestStatus.DELIVERED ? (
+                <p className="text-sm text-muted-foreground">
+                  This report has already been delivered to the customer.
+                </p>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  PDF upload is not available for this request status.
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-2xl border border-dashed border-border p-4">
+              <p className="text-sm font-semibold text-foreground">
+                Create report
+              </p>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                Generate a PDF report by entering vehicle details manually.
+              </p>
+
+              <div className="mt-4">
+                {request.status === ReportRequestStatus.PROCESSING ? (
+                  <CreateReportDialog
+                    requestId={request.id}
+                    requestNumber={request.requestNumber}
+                    vehicleIdentifier={request.vehicleIdentifier}
+                  />
+                ) : request.status === ReportRequestStatus.NEW ? (
+                  <p className="text-sm text-muted-foreground">
+                    Start processing this request before creating a report.
+                  </p>
+                ) : request.status === ReportRequestStatus.DELIVERED ? (
+                  <p className="text-sm text-muted-foreground">
+                    This report has already been delivered to the customer.
+                  </p>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Create report is not available for this request status.
+                  </p>
+                )}
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -337,34 +296,22 @@ export default async function ReportRequestDetailsPage({
                     <p className="font-semibold text-foreground">
                       {report.title}
                     </p>
-                    <div className="space-y-3">
-                      {reportsWithSignedUrls.map((report) => (
-                        <div
-                          key={report.id}
-                          className="rounded-2xl border border-border p-4"
-                        >
-                          <p className="font-semibold text-foreground">
-                            {report.title}
-                          </p>
 
-                          <p className="mt-1 text-xs text-muted-foreground">
-                            {report.fileName || "PDF report"} • {report.status}
-                          </p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {report.fileName || "PDF report"} • {report.status}
+                    </p>
 
-                          {report.signedUrl && (
-                            <a
-                              href={report.signedUrl}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-brand hover:underline"
-                            >
-                              View PDF
-                              <ExternalLink className="h-4 w-4" />
-                            </a>
-                          )}
-                        </div>
-                      ))}
-                    </div>
+                    {report.signedUrl && (
+                      <a
+                        href={report.signedUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="mt-3 inline-flex items-center gap-2 text-sm font-semibold text-brand hover:underline"
+                      >
+                        View PDF
+                        <ExternalLink className="h-4 w-4" />
+                      </a>
+                    )}
                   </div>
                 ))}
               </div>
