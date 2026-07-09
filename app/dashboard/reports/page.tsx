@@ -1,13 +1,19 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { ArrowLeft, FileText, PackageCheck, PlusCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  Download,
+  FileText,
+  PackageCheck,
+  PlusCircle,
+} from "lucide-react";
 
 import { getCurrentUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma/client";
 import { REPORT_BUCKET, supabaseAdmin } from "@/lib/supabase/admin";
 import CustomerReportsTable from "@/components/dashboard/CustomerReportsTable";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Prisma, ReportRequestStatus, ReportStatus } from "@/generated/prisma";
 
 function parseFilters(searchParams: {
@@ -160,25 +166,33 @@ export default async function CustomerReportsPage({
     }),
   );
 
-  const [totalDeliveredReports, totalDeliveredRequests] = await Promise.all([
-    prisma.report.count({
-      where: {
-        customerId: user.id,
-        status: ReportStatus.ACTIVE,
-        request: {
-          is: {
-            status: ReportRequestStatus.DELIVERED,
+  const [totalDeliveredReports, totalDeliveredRequests, totalRequests] =
+    await Promise.all([
+      prisma.report.count({
+        where: {
+          customerId: user.id,
+          status: ReportStatus.ACTIVE,
+          request: {
+            is: {
+              status: ReportRequestStatus.DELIVERED,
+            },
           },
         },
-      },
-    }),
-    prisma.reportRequest.count({
-      where: {
-        customerId: user.id,
-        status: ReportRequestStatus.DELIVERED,
-      },
-    }),
-  ]);
+      }),
+
+      prisma.reportRequest.count({
+        where: {
+          customerId: user.id,
+          status: ReportRequestStatus.DELIVERED,
+        },
+      }),
+
+      prisma.reportRequest.count({
+        where: {
+          customerId: user.id,
+        },
+      }),
+    ]);
 
   const tableReports = reportsWithSignedUrls.map((report) => ({
     id: report.id,
@@ -190,76 +204,120 @@ export default async function CustomerReportsPage({
 
     requestId: report.request.id,
     requestNumber: report.request.requestNumber,
-    vehicleIdentifier: report.request.vehicleIdentifier,
+    vehicleIdentifier:
+      report.request.vehicleIdentifier ||
+      (report.request.lotNumber
+        ? `Lot ${report.request.lotNumber}`
+        : "Vehicle request"),
     lotNumber: report.request.lotNumber,
     auctionPlatform: report.request.auctionPlatform,
   }));
 
   return (
-    <main className="min-h-screen bg-muted/40">
-      <section className="mx-auto max-w-7xl space-y-8 px-6 py-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-brand"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to dashboard
-            </Link>
+    <div className="space-y-8">
+      <section className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
+        <div className="relative p-6 sm:p-8">
+          <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-brand/10 blur-3xl" />
+          <div className="absolute bottom-0 left-10 h-32 w-32 rounded-full bg-amber-300/20 blur-3xl" />
 
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-foreground">
-              My Reports
-            </h1>
-
-            <p className="mt-2 text-sm text-muted-foreground">
-              View and download all delivered PDF vehicle reports.
-            </p>
-          </div>
-
-          <Link href="/dashboard/report-requests/new">
-            <Button className="cursor-pointer rounded-2xl">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              New Report Request
-            </Button>
-          </Link>
-        </div>
-
-        <div className="grid gap-5 md:grid-cols-2">
-          <Card className="h-25">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium">
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="inline-flex items-center rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-brand">
                 Delivered Reports
-              </CardTitle>
-              <FileText className="h-5 w-5 text-brand" />
-            </CardHeader>
+              </p>
 
-            <CardContent>
-              <div className="text-2xl font-bold">{totalDeliveredReports}</div>
-            </CardContent>
-          </Card>
+              <h1 className="mt-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                My Reports
+              </h1>
 
-          <Card className="h-25">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium">
-                Delivered Requests
-              </CardTitle>
-              <PackageCheck className="h-5 w-5 text-brand" />
-            </CardHeader>
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
+                View, download and manage all delivered Japanese vehicle PDF
+                reports from your account. Each report is connected to its
+                original request for easy tracking.
+              </p>
+            </div>
 
-            <CardContent>
-              <div className="text-2xl font-bold">{totalDeliveredRequests}</div>
-            </CardContent>
-          </Card>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link href="/dashboard/report-requests/new">
+                <Button className="h-11 cursor-pointer rounded-2xl">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  New Report Request
+                </Button>
+              </Link>
+
+              <Link href="/dashboard/report-requests">
+                <Button
+                  variant="outline"
+                  className="h-11 cursor-pointer rounded-2xl"
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  My Requests
+                </Button>
+              </Link>
+            </div>
+          </div>
         </div>
+      </section>
 
-        <CustomerReportsTable
-          reports={tableReports}
-          totalReports={filteredReportsCount}
-          currentPage={currentPage}
-          pageSize={pageSize}
+      <section className="grid gap-5 md:grid-cols-3">
+        <ReportStatCard
+          title="Delivered Reports"
+          value={totalDeliveredReports}
+          description="PDF reports ready"
+          icon={<Download className="h-5 w-5" />}
+        />
+
+        <ReportStatCard
+          title="Delivered Requests"
+          value={totalDeliveredRequests}
+          description="Requests completed"
+          icon={<PackageCheck className="h-5 w-5" />}
+        />
+
+        <ReportStatCard
+          title="Total Requests"
+          value={totalRequests}
+          description="All submitted requests"
+          icon={<CheckCircle2 className="h-5 w-5" />}
         />
       </section>
-    </main>
+
+      <CustomerReportsTable
+        reports={tableReports}
+        totalReports={filteredReportsCount}
+        currentPage={currentPage}
+        pageSize={pageSize}
+      />
+    </div>
+  );
+}
+
+function ReportStatCard({
+  title,
+  value,
+  description,
+  icon,
+}: {
+  title: string;
+  value: number;
+  description: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <Card className="rounded-[2rem]">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <p className="mt-3 text-3xl font-bold text-foreground">{value}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          </div>
+
+          <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-brand">
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }

@@ -2,10 +2,14 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import {
   AlertCircle,
-  ArrowLeft,
   CalendarDays,
+  Clock3,
+  Download,
   Eye,
   FileText,
+  Hash,
+  Package,
+  SearchCheck,
 } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/auth/current-user";
@@ -51,6 +55,7 @@ export default async function CustomerReportRequestDetailsPage({
           title: true,
           fileUrl: true,
           fileName: true,
+          fileSize: true,
           uploadedAt: true,
         },
       },
@@ -62,6 +67,17 @@ export default async function CustomerReportRequestDetailsPage({
           id: true,
           message: true,
           createdAt: true,
+          senderId: true,
+        },
+      },
+      userPackage: {
+        select: {
+          packageNumber: true,
+          plan: {
+            select: {
+              name: true,
+            },
+          },
         },
       },
     },
@@ -85,105 +101,102 @@ export default async function CustomerReportRequestDetailsPage({
   );
 
   const latestMessage = request.messages[0] || null;
+  const requestTitle = getRequestDisplayName({
+    vehicleIdentifier: request.vehicleIdentifier,
+    lotNumber: request.lotNumber,
+  });
 
   return (
-    <main className="min-h-screen bg-muted/40">
-      <section className="mx-auto max-w-5xl space-y-8 px-6 py-8">
-        <div>
-          <Link
-            href="/dashboard"
-            className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-brand"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to dashboard
-          </Link>
+    <div className="space-y-8">
+      <section className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
+        <div className="relative p-6 sm:p-8">
+          <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-brand/10 blur-3xl" />
+          <div className="absolute bottom-0 left-10 h-32 w-32 rounded-full bg-amber-300/20 blur-3xl" />
 
-          <div className="mt-4 flex flex-wrap items-start justify-between gap-4">
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <h1 className="text-3xl font-bold tracking-tight text-foreground">
-                {request.requestNumber}
+              <p className="inline-flex items-center rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-brand">
+                Request Details
+              </p>
+
+              <h1 className="mt-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                {requestTitle}
               </h1>
 
-              <p className="mt-2 text-sm text-muted-foreground">
-                View request status, report delivery and admin messages.
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
+                Track request status, vehicle details, admin updates and
+                delivered PDF reports for this vehicle report request.
               </p>
+
+              <div className="mt-4 flex flex-wrap items-center gap-3">
+                <RequestStatusBadge status={request.status} />
+
+                <span className="text-sm text-muted-foreground">
+                  {request.requestNumber}
+                </span>
+              </div>
             </div>
 
-            <RequestStatusBadge status={request.status} />
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link href="/dashboard/report-requests">
+                <Button
+                  variant="outline"
+                  className="cursor-pointer rounded-2xl"
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  My Requests
+                </Button>
+              </Link>
+
+              <Link href="/dashboard/report-requests/new">
+                <Button className="cursor-pointer rounded-2xl">
+                  <SearchCheck className="mr-2 h-4 w-4" />
+                  New Request
+                </Button>
+              </Link>
+            </div>
           </div>
         </div>
+      </section>
 
-        <div className="grid gap-5 md:grid-cols-2">
-          <Card>
-            <CardHeader>
-              <CardTitle>Vehicle Details</CardTitle>
-            </CardHeader>
+      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+        <RequestInfoCard
+          title="Current Status"
+          value={request.status.replaceAll("_", " ")}
+          description="Latest request stage"
+          icon={<Clock3 className="h-5 w-5" />}
+        />
 
-            <CardContent className="space-y-4">
-              <DetailItem
-                label="Vehicle Identifier / Chassis / VIN"
-                value={request.vehicleIdentifier}
-              />
+        <RequestInfoCard
+          title="Request Number"
+          value={request.requestNumber}
+          description="Unique tracking ID"
+          icon={<Hash className="h-5 w-5" />}
+        />
 
-              <DetailItem label="Lot Number" value={request.lotNumber} />
+        <RequestInfoCard
+          title="Reports"
+          value={reportsWithSignedUrls.length}
+          description="Delivered PDF files"
+          icon={<Download className="h-5 w-5" />}
+        />
 
-              <DetailItem
-                label="Auction Platform"
-                value={request.auctionPlatform}
-              />
+        <RequestInfoCard
+          title="Package"
+          value={request.userPackage?.plan.name || "Not linked"}
+          description={request.userPackage?.packageNumber || "Package details"}
+          icon={<Package className="h-5 w-5" />}
+        />
+      </section>
 
-              <DetailItem
-                label="Auction Date"
-                value={
-                  request.auctionDate
-                    ? request.auctionDate.toLocaleDateString("en-LK")
-                    : null
-                }
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Request Timeline</CardTitle>
-            </CardHeader>
-
-            <CardContent className="space-y-4">
-              <div className="flex items-start gap-3 rounded-2xl border border-border p-4">
-                <CalendarDays className="mt-0.5 h-5 w-5 text-brand" />
-
-                <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    Request Created
-                  </p>
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    {request.createdAt.toLocaleString("en-LK")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-start gap-3 rounded-2xl border border-border p-4">
-                <FileText className="mt-0.5 h-5 w-5 text-brand" />
-
-                <div>
-                  <p className="text-sm font-semibold text-foreground">
-                    Current Status
-                  </p>
-                  <div className="mt-2">
-                    <RequestStatusBadge status={request.status} />
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {request.status === ReportRequestStatus.REJECTED && latestMessage && (
-          <Card className="border-rose-200 bg-rose-50 dark:border-rose-800 dark:bg-rose-950/30">
+      {(request.status === ReportRequestStatus.REJECTED ||
+        request.status === ReportRequestStatus.CANCELLED) &&
+        latestMessage && (
+          <Card className="rounded-[2rem] border-rose-200 bg-rose-50 dark:border-rose-800 dark:bg-rose-950/30">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-rose-700 dark:text-rose-400">
                 <AlertCircle className="h-5 w-5" />
-                Rejection Reason
+                Request Update
               </CardTitle>
             </CardHeader>
 
@@ -191,45 +204,144 @@ export default async function CustomerReportRequestDetailsPage({
               <p className="text-sm leading-7 text-muted-foreground">
                 {latestMessage.message}
               </p>
+
+              <p className="mt-3 text-xs text-muted-foreground">
+                Updated on {latestMessage.createdAt.toLocaleString("en-LK")}
+              </p>
             </CardContent>
           </Card>
         )}
 
-        <Card>
+      <section className="grid gap-6 xl:grid-cols-3">
+        <Card className="rounded-[2rem] xl:col-span-2">
           <CardHeader>
-            <CardTitle>Delivered Reports</CardTitle>
+            <CardTitle>Vehicle Information</CardTitle>
           </CardHeader>
 
-          <CardContent>
-            {reportsWithSignedUrls.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-border p-6 text-center">
-                <p className="font-semibold text-foreground">
-                  No report delivered yet
-                </p>
+          <CardContent className="grid gap-4 md:grid-cols-2">
+            <DetailItem
+              label="Vehicle Identifier / Chassis / VIN"
+              value={request.vehicleIdentifier || "Not provided"}
+            />
 
-                <p className="mt-2 text-sm text-muted-foreground">
-                  Once admin delivers your report, the PDF will appear here.
-                </p>
+            <DetailItem
+              label="Lot Number"
+              value={request.lotNumber || "Not provided"}
+            />
+
+            <DetailItem
+              label="Auction Platform"
+              value={request.auctionPlatform || "Not provided"}
+            />
+
+            <DetailItem
+              label="Auction Date"
+              value={
+                request.auctionDate
+                  ? request.auctionDate.toLocaleDateString("en-LK")
+                  : "Not provided"
+              }
+            />
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-[2rem]">
+          <CardHeader>
+            <CardTitle>Timeline</CardTitle>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            <TimelineItem
+              title="Request Created"
+              description={request.createdAt.toLocaleString("en-LK")}
+              icon={<CalendarDays className="h-4 w-4" />}
+            />
+
+            <TimelineItem
+              title="Last Updated"
+              description={request.updatedAt.toLocaleString("en-LK")}
+              icon={<Clock3 className="h-4 w-4" />}
+            />
+
+            <div className="rounded-2xl border border-border p-4">
+              <p className="text-sm font-semibold text-foreground">
+                Current Status
+              </p>
+
+              <div className="mt-2">
+                <RequestStatusBadge status={request.status} />
               </div>
-            ) : (
-              <div className="space-y-4">
-                {reportsWithSignedUrls.map((report) => (
-                  <div
-                    key={report.id}
-                    className="flex flex-col justify-between gap-4 rounded-2xl border border-border p-4 sm:flex-row sm:items-center"
-                  >
-                    <div>
+            </div>
+          </CardContent>
+        </Card>
+      </section>
+
+      <Card className="rounded-[2rem]">
+        <CardHeader>
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <CardTitle>Delivered Reports</CardTitle>
+              <p className="mt-1 text-sm text-muted-foreground">
+                PDF reports delivered by the admin team
+              </p>
+            </div>
+
+            <Link href="/dashboard/reports">
+              <Button variant="outline" size="sm" className="rounded-xl">
+                View All Reports
+              </Button>
+            </Link>
+          </div>
+        </CardHeader>
+
+        <CardContent>
+          {reportsWithSignedUrls.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-border p-8 text-center">
+              <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-brand">
+                <FileText className="h-6 w-6" />
+              </div>
+
+              <p className="mt-5 font-semibold text-foreground">
+                No report delivered yet
+              </p>
+
+              <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                Once admin completes and delivers your request, the PDF report
+                will appear here.
+              </p>
+            </div>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2">
+              {reportsWithSignedUrls.map((report) => (
+                <div
+                  key={report.id}
+                  className="rounded-3xl border border-border bg-background p-5"
+                >
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary text-brand">
+                      <FileText className="h-5 w-5" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
                       <p className="font-semibold text-foreground">
                         {report.title}
                       </p>
 
                       <p className="mt-1 text-sm text-muted-foreground">
-                        {report.fileName || "PDF report"} • Uploaded{" "}
-                        {report.uploadedAt.toLocaleDateString("en-LK")}
+                        {report.fileName || "PDF report"}
+                        {report.fileSize
+                          ? ` • ${formatFileSize(report.fileSize)}`
+                          : ""}
+                      </p>
+
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        Uploaded {report.uploadedAt.toLocaleDateString("en-LK")}
                       </p>
                     </div>
+                  </div>
 
-                    {report.signedUrl && (
+                  <div className="mt-5 flex flex-wrap gap-2">
+                    {report.signedUrl ? (
                       <a
                         href={report.signedUrl}
                         target="_blank"
@@ -240,31 +352,108 @@ export default async function CustomerReportRequestDetailsPage({
                           View PDF
                         </Button>
                       </a>
+                    ) : (
+                      <Button size="sm" disabled className="rounded-xl">
+                        <Eye className="mr-1.5 h-4 w-4" />
+                        No PDF
+                      </Button>
                     )}
                   </div>
-                ))}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {request.messages.length > 0 && (
+        <Card className="rounded-[2rem]">
+          <CardHeader>
+            <CardTitle>Admin Updates</CardTitle>
+          </CardHeader>
+
+          <CardContent className="space-y-4">
+            {request.messages.map((message) => (
+              <div
+                key={message.id}
+                className="rounded-2xl border border-border bg-background p-4"
+              >
+                <p className="text-sm leading-7 text-muted-foreground">
+                  {message.message}
+                </p>
+
+                <p className="mt-3 text-xs text-muted-foreground">
+                  {message.createdAt.toLocaleString("en-LK")}
+                </p>
               </div>
-            )}
+            ))}
           </CardContent>
         </Card>
-      </section>
-    </main>
+      )}
+    </div>
   );
 }
 
-function DetailItem({
-  label,
+function RequestInfoCard({
+  title,
   value,
+  description,
+  icon,
 }: {
-  label: string;
-  value?: string | null;
+  title: string;
+  value: string | number;
+  description: string;
+  icon: React.ReactNode;
 }) {
   return (
-    <div>
+    <Card className="rounded-[2rem]">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <p className="mt-3 truncate text-2xl font-bold text-foreground">
+              {value}
+            </p>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          </div>
+
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary text-brand">
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DetailItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-border p-4">
       <p className="text-sm text-muted-foreground">{label}</p>
-      <p className="mt-1 font-semibold text-foreground">
-        {value || "Not provided"}
-      </p>
+      <p className="mt-1 font-semibold text-foreground">{value}</p>
+    </div>
+  );
+}
+
+function TimelineItem({
+  title,
+  description,
+  icon,
+}: {
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-2xl border border-border p-4">
+      <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-secondary text-brand">
+        {icon}
+      </div>
+
+      <div>
+        <p className="text-sm font-semibold text-foreground">{title}</p>
+        <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+      </div>
     </div>
   );
 }
@@ -272,7 +461,7 @@ function DetailItem({
 function RequestStatusBadge({ status }: { status: ReportRequestStatus }) {
   if (status === ReportRequestStatus.NEW) {
     return (
-      <Badge className="border-amber-200 bg-amber-50 text-amber-700 ring-1 ring-amber-500/30 dark:border-amber-800 dark:bg-amber-950/30 dark:text-amber-400">
+      <Badge className="border-amber-200 bg-amber-50 text-amber-700 ring-1 ring-amber-500/30">
         NEW
       </Badge>
     );
@@ -280,7 +469,7 @@ function RequestStatusBadge({ status }: { status: ReportRequestStatus }) {
 
   if (status === ReportRequestStatus.PROCESSING) {
     return (
-      <Badge className="border-sky-200 bg-sky-50 text-sky-700 ring-1 ring-sky-500/30 dark:border-sky-800 dark:bg-sky-950/30 dark:text-sky-400">
+      <Badge className="border-sky-200 bg-sky-50 text-sky-700 ring-1 ring-sky-500/30">
         PROCESSING
       </Badge>
     );
@@ -288,7 +477,7 @@ function RequestStatusBadge({ status }: { status: ReportRequestStatus }) {
 
   if (status === ReportRequestStatus.COMPLETED) {
     return (
-      <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/30 dark:border-emerald-800 dark:bg-emerald-950/30 dark:text-emerald-400">
+      <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/30">
         COMPLETED
       </Badge>
     );
@@ -296,7 +485,7 @@ function RequestStatusBadge({ status }: { status: ReportRequestStatus }) {
 
   if (status === ReportRequestStatus.DELIVERED) {
     return (
-      <Badge className="border-indigo-200 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500/30 dark:border-indigo-800 dark:bg-indigo-950/30 dark:text-indigo-400">
+      <Badge className="border-indigo-200 bg-indigo-50 text-indigo-700 ring-1 ring-indigo-500/30">
         DELIVERED
       </Badge>
     );
@@ -307,11 +496,30 @@ function RequestStatusBadge({ status }: { status: ReportRequestStatus }) {
     status === ReportRequestStatus.CANCELLED
   ) {
     return (
-      <Badge className="border-rose-200 bg-rose-50 text-rose-700 ring-1 ring-rose-500/30 dark:border-rose-800 dark:bg-rose-950/30 dark:text-rose-400">
+      <Badge className="border-rose-200 bg-rose-50 text-rose-700 ring-1 ring-rose-500/30">
         {status}
       </Badge>
     );
   }
 
   return <Badge variant="outline">{status}</Badge>;
+}
+
+function getRequestDisplayName(request: {
+  vehicleIdentifier: string;
+  lotNumber: string | null;
+}) {
+  if (request.vehicleIdentifier) {
+    return request.vehicleIdentifier;
+  }
+
+  if (request.lotNumber) {
+    return `Lot ${request.lotNumber}`;
+  }
+
+  return "Vehicle request";
+}
+
+function formatFileSize(size: number) {
+  return `${(size / 1024 / 1024).toFixed(2)} MB`;
 }

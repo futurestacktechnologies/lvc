@@ -1,12 +1,12 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  ArrowLeft,
-  CheckCircle2,
   Clock,
   FileText,
   PlusCircle,
+  SearchCheck,
   Truck,
+  XCircle,
 } from "lucide-react";
 
 import { getCurrentUser } from "@/lib/auth/current-user";
@@ -14,7 +14,7 @@ import { prisma } from "@/lib/prisma/client";
 import { REPORT_BUCKET, supabaseAdmin } from "@/lib/supabase/admin";
 import CustomerReportRequestsTable from "@/components/dashboard/CustomerReportRequestsTable";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Prisma, ReportRequestStatus, ReportStatus } from "@/generated/prisma";
 
 function parseFilters(searchParams: {
@@ -195,37 +195,56 @@ export default async function CustomerReportRequestsPage({
     }),
   );
 
-  const [totalRequests, newRequests, processingRequests, deliveredRequests] =
-    await Promise.all([
-      prisma.reportRequest.count({
-        where: {
-          customerId: user.id,
+  const [
+    totalRequests,
+    newRequests,
+    processingRequests,
+    deliveredRequests,
+    rejectedRequests,
+  ] = await Promise.all([
+    prisma.reportRequest.count({
+      where: {
+        customerId: user.id,
+      },
+    }),
+
+    prisma.reportRequest.count({
+      where: {
+        customerId: user.id,
+        status: ReportRequestStatus.NEW,
+      },
+    }),
+
+    prisma.reportRequest.count({
+      where: {
+        customerId: user.id,
+        status: ReportRequestStatus.PROCESSING,
+      },
+    }),
+
+    prisma.reportRequest.count({
+      where: {
+        customerId: user.id,
+        status: ReportRequestStatus.DELIVERED,
+      },
+    }),
+
+    prisma.reportRequest.count({
+      where: {
+        customerId: user.id,
+        status: {
+          in: [ReportRequestStatus.REJECTED, ReportRequestStatus.CANCELLED],
         },
-      }),
-      prisma.reportRequest.count({
-        where: {
-          customerId: user.id,
-          status: ReportRequestStatus.NEW,
-        },
-      }),
-      prisma.reportRequest.count({
-        where: {
-          customerId: user.id,
-          status: ReportRequestStatus.PROCESSING,
-        },
-      }),
-      prisma.reportRequest.count({
-        where: {
-          customerId: user.id,
-          status: ReportRequestStatus.DELIVERED,
-        },
-      }),
-    ]);
+      },
+    }),
+  ]);
 
   const tableRequests = requestsWithSignedReports.map((request) => ({
     id: request.id,
     requestNumber: request.requestNumber,
-    vehicleIdentifier: request.vehicleIdentifier,
+    vehicleIdentifier:
+      request.vehicleIdentifier ||
+      (request.lotNumber ? `Lot ${request.lotNumber}` : "Vehicle request"),
     lotNumber: request.lotNumber,
     auctionDate: request.auctionDate ? request.auctionDate.toISOString() : null,
     auctionPlatform: request.auctionPlatform,
@@ -238,87 +257,131 @@ export default async function CustomerReportRequestsPage({
   }));
 
   return (
-    <main className="min-h-screen bg-muted/40">
-      <section className="mx-auto max-w-7xl space-y-8 px-6 py-8">
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <Link
-              href="/dashboard"
-              className="inline-flex items-center gap-2 text-sm font-medium text-muted-foreground transition hover:text-brand"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              Back to dashboard
-            </Link>
+    <div className="space-y-8">
+      <section className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
+        <div className="relative p-6 sm:p-8">
+          <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-brand/10 blur-3xl" />
+          <div className="absolute bottom-0 left-10 h-32 w-32 rounded-full bg-amber-300/20 blur-3xl" />
 
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-foreground">
-              My Report Requests
-            </h1>
+          <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
+            <div>
+              <p className="inline-flex items-center rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-brand">
+                Request Tracking
+              </p>
 
-            <p className="mt-2 text-sm text-muted-foreground">
-              Track all your vehicle report requests, delivered PDFs and admin
-              updates.
-            </p>
+              <h1 className="mt-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
+                My Report Requests
+              </h1>
+
+              <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
+                Track every vehicle report request, view admin updates, open
+                delivered PDF reports and manage rejected or pending requests in
+                one place.
+              </p>
+            </div>
+
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <Link href="/dashboard/report-requests/new">
+                <Button className="h-11 cursor-pointer rounded-2xl">
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  New Report
+                </Button>
+              </Link>
+
+              <Link href="/dashboard/reports">
+                <Button
+                  variant="outline"
+                  className="h-11 cursor-pointer rounded-2xl"
+                >
+                  <FileText className="mr-2 h-4 w-4" />
+                  My Reports
+                </Button>
+              </Link>
+            </div>
           </div>
-
-          <Link href="/dashboard/report-requests/new">
-            <Button className="cursor-pointer rounded-2xl">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              New Report
-            </Button>
-          </Link>
         </div>
+      </section>
 
-        <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
-          <Card className="h-25">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium">
-                Total Requests
-              </CardTitle>
-              <FileText className="h-5 w-5 text-brand" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalRequests}</div>
-            </CardContent>
-          </Card>
+      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
+        <RequestStatCard
+          title="Total"
+          value={totalRequests}
+          description="All requests"
+          icon={<FileText className="h-5 w-5" />}
+        />
 
-          <Card className="h-25">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium">New</CardTitle>
-              <Clock className="h-5 w-5 text-brand" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{newRequests}</div>
-            </CardContent>
-          </Card>
+        <RequestStatCard
+          title="New"
+          value={newRequests}
+          description="Waiting review"
+          icon={<Clock className="h-5 w-5" />}
+        />
 
-          <Card className="h-25">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium">Processing</CardTitle>
-              <CheckCircle2 className="h-5 w-5 text-brand" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{processingRequests}</div>
-            </CardContent>
-          </Card>
+        <RequestStatCard
+          title="Processing"
+          value={processingRequests}
+          description="Admin checking"
+          icon={<SearchCheck className="h-5 w-5" />}
+        />
 
-          <Card className="h-25">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0">
-              <CardTitle className="text-sm font-medium">Delivered</CardTitle>
-              <Truck className="h-5 w-5 text-brand" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{deliveredRequests}</div>
-            </CardContent>
-          </Card>
-        </div>
+        <RequestStatCard
+          title="Delivered"
+          value={deliveredRequests}
+          description="PDF ready"
+          icon={<Truck className="h-5 w-5" />}
+        />
 
-        <CustomerReportRequestsTable
-          requests={tableRequests}
-          totalRequests={filteredRequestsCount}
-          currentPage={currentPage}
-          pageSize={pageSize}
+        <RequestStatCard
+          title="Rejected"
+          value={rejectedRequests}
+          description="Needs attention"
+          icon={<XCircle className="h-5 w-5" />}
+          danger={rejectedRequests > 0}
         />
       </section>
-    </main>
+
+      <CustomerReportRequestsTable
+        requests={tableRequests}
+        totalRequests={filteredRequestsCount}
+        currentPage={currentPage}
+        pageSize={pageSize}
+      />
+    </div>
+  );
+}
+
+function RequestStatCard({
+  title,
+  value,
+  description,
+  icon,
+  danger = false,
+}: {
+  title: string;
+  value: number;
+  description: string;
+  icon: React.ReactNode;
+  danger?: boolean;
+}) {
+  return (
+    <Card className="rounded-[2rem]">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-muted-foreground">{title}</p>
+            <p className="mt-3 text-3xl font-bold text-foreground">{value}</p>
+            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+          </div>
+
+          <div
+            className={`flex h-12 w-12 items-center justify-center rounded-2xl ${
+              danger ? "bg-rose-50 text-rose-600" : "bg-secondary text-brand"
+            }`}
+          >
+            {icon}
+          </div>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
