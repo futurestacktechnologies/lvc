@@ -39,6 +39,34 @@ type PaymentCheckoutFormProps = {
   user: UserInfo;
 };
 
+type PayHereCreateResponse = {
+  success: boolean;
+  message?: string;
+  checkoutUrl?: string;
+  payment?: Record<string, string>;
+};
+
+function redirectToPayHere(
+  checkoutUrl: string,
+  paymentFields: Record<string, string>,
+) {
+  const form = document.createElement("form");
+  form.method = "POST";
+  form.action = checkoutUrl;
+  form.style.display = "none";
+
+  Object.entries(paymentFields).forEach(([key, value]) => {
+    const input = document.createElement("input");
+    input.type = "hidden";
+    input.name = key;
+    input.value = value;
+    form.appendChild(input);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+}
+
 export default function PaymentCheckoutForm({
   plan,
   user,
@@ -97,9 +125,48 @@ export default function PaymentCheckoutForm({
     event.preventDefault();
 
     if (paymentMethod === "ONLINE_GATEWAY") {
-      toast.info("Online payment coming next", {
-        description: "We will connect the payment gateway in a later step.",
-      });
+      try {
+        setIsSubmitting(true);
+
+        const response = await fetch("/api/payments/payhere/create", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            planCode: plan.code,
+          }),
+        });
+
+        const result = (await response.json()) as PayHereCreateResponse;
+
+        if (
+          !response.ok ||
+          !result.success ||
+          !result.checkoutUrl ||
+          !result.payment
+        ) {
+          toast.error("Online payment failed", {
+            description: result.message || "Unable to start PayHere payment.",
+          });
+          return;
+        }
+
+        toast.success("Redirecting to PayHere", {
+          description: "Please complete your payment securely.",
+        });
+
+        redirectToPayHere(result.checkoutUrl, result.payment);
+      } catch (error) {
+        console.error(error);
+
+        toast.error("Online payment failed", {
+          description: "Something went wrong while starting PayHere payment.",
+        });
+      } finally {
+        setIsSubmitting(false);
+      }
+
       return;
     }
 
@@ -293,7 +360,6 @@ export default function PaymentCheckoutForm({
                       </p>
 
                       <div className="mt-4 grid gap-2 text-sm">
-                        <BankDetail label="Bank Name" value="Seylan Bank" />
                         <BankDetail
                           label="Account Name"
                           value="Enfield Nexus Consultancies"
@@ -302,6 +368,9 @@ export default function PaymentCheckoutForm({
                           label="Account Number"
                           value="172013758531001"
                         />
+                        <BankDetail label="Bank Name" value="Seylan Bank" />
+                        <BankDetail label="Branch" value="Hettipola Branch" />
+
                         <BankDetail
                           label="Payment Reference"
                           value={plan.code}
@@ -373,20 +442,23 @@ export default function PaymentCheckoutForm({
                   <div className="rounded-xl bg-brand/10 p-3 text-brand">
                     <CreditCard className="h-5 w-5" />
                   </div>
+
                   <div>
                     <p className="font-semibold text-foreground">
-                      Debit / Credit Card
+                      Pay securely with PayHere
                     </p>
+
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      This option is prepared for future online gateway
-                      integration. For now, use bank transfer and upload payment
-                      proof.
+                      You will be redirected to PayHere to complete the payment
+                      using a debit card, credit card, or another supported
+                      online payment method. Your package credits will be
+                      activated automatically after PayHere confirms the
+                      payment.
                     </p>
                   </div>
                 </div>
               </div>
             )}
-
             <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/80 p-6 dark:from-slate-800/50 dark:to-slate-900/50">
               <div className="flex items-center justify-between">
                 <p className="text-sm font-medium text-muted-foreground">
@@ -434,7 +506,7 @@ function PaymentMethodCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-2xl border-2 p-5 text-left transition-all duration-300",
+        "rounded-2xl border-2 p-5 text-left transition-all duration-300 cursor-pointer",
         active
           ? "border-brand bg-secondary/80 text-foreground shadow-lg shadow-brand/20"
           : "border-border bg-background text-muted-foreground hover:border-brand/50 hover:bg-secondary/20",
