@@ -4,6 +4,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma/client";
 import { normalizePhone } from "@/lib/auth/phone";
 import { generateOtp, getOtpExpiryDate, hashOtp } from "@/lib/auth/otp";
+import { sendOtpSms } from "@/lib/sms/notify-lk";
 
 export const runtime = "nodejs";
 
@@ -54,22 +55,44 @@ export async function POST(request: Request) {
 
     const otp = generateOtp();
 
-    await prisma.otpCode.create({
+    const otpRecord = await prisma.otpCode.create({
       data: {
         userId: user.id,
         phone,
         codeHash: hashOtp(otp, phone),
         purpose: "LOGIN",
-        channel: "BOTH",
+        channel: "SMS",
         expiresAt: getOtpExpiryDate(),
       },
     });
 
-    console.log(`[DEV OTP - LOGIN] ${phone}: ${otp}`);
+    try {
+      await sendOtpSms({
+        phone,
+        otp,
+        purpose: "LOGIN",
+      });
+    } catch (smsError) {
+      await prisma.otpCode.delete({
+        where: { id: otpRecord.id },
+      });
+
+      console.error("Login OTP SMS failed:", smsError);
+
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Failed to send OTP SMS. Please try again.",
+        },
+        { status: 500 },
+      );
+    }
+
+    console.log(`[OTP - LOGIN SENT] ${phone}`);
 
     return NextResponse.json({
       success: true,
-      message: "OTP sent through WhatsApp and SMS.",
+      message: "OTP sent to your mobile number.",
       devOtp: process.env.NODE_ENV === "development" ? otp : undefined,
     });
   } catch (error) {
