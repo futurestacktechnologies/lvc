@@ -311,7 +311,7 @@ export default function PaymentStatusPoller({
             variant="outline"
             onClick={() => fetchStatus(true)}
             disabled={!paymentNumber || isRefreshing}
-            className="flex-1 rounded-2xl"
+            className="flex-1 rounded-2xl cursor-pointer"
           >
             {isRefreshing ? (
               <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -322,7 +322,9 @@ export default function PaymentStatusPoller({
           </Button>
 
           <Link href="/dashboard" className="flex-1">
-            <Button className="w-full rounded-2xl">Go to Dashboard</Button>
+            <Button className="w-full rounded-2xl cursor-pointer">
+              Go to Dashboard
+            </Button>
           </Link>
         </div>
       </CardContent>

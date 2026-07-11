@@ -12,7 +12,8 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: APP.name,
-  description: "Japan Vehicle History Report Portal",
+  description:
+    "Enfield Nexus provides fast and reliable Japanese vehicle history reports and auction details for vehicle buyers and importers",
 };
 
 export default function RootLayout({

@@ -11,6 +11,7 @@ import {
   Settings,
   UserRound,
   UsersRound,
+  MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -23,6 +24,11 @@ const adminLinks = [
   { label: "Payment Plans", href: "/admin/payment-plans", icon: Package },
   { label: "Reports", href: "/admin/reports", icon: FileText },
   { label: "Settings", href: "/admin/settings", icon: Settings },
+  {
+    label: "Support Chat",
+    href: "/admin/support-chat",
+    icon: MessageCircle,
+  },
 ];
 
 type AdminSidebarProps = {

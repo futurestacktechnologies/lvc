@@ -46,3 +46,17 @@ export async function getCurrentUser() {
 
   return session.user;
 }
+
+export async function requireAdminUser() {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error("UNAUTHORIZED");
+  }
+
+  if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
+    throw new Error("FORBIDDEN");
+  }
+
+  return user;
+}

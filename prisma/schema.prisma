@@ -86,6 +86,13 @@ enum NotificationType {
   SYSTEM
 }
 
+enum SupportConversationStatus {
+  OPEN
+  WAITING_ADMIN
+  WAITING_CUSTOMER
+  CLOSED
+}
+
 model User {
   id            String     @id @default(cuid())
   name          String
@@ -95,19 +102,22 @@ model User {
   phoneVerified Boolean    @default(false)
   lastLoginAt   DateTime?
 
-  requests            ReportRequest[]      @relation("CustomerRequests")
-  assignedRequests    ReportRequest[]      @relation("AssignedAdminRequests")
-  payments            Payment[]            @relation("CustomerPayments")
-  verifiedPayments    Payment[]            @relation("VerifiedPayments")
-  packages            UserPackage[]
-  reports             Report[]             @relation("CustomerReports")
-  uploadedReports     Report[]             @relation("UploadedReports")
-  otps                OtpCode[]
-  messages            Message[]            @relation("SenderMessages")
-  notifications       Notification[]
-  activityLogs        ActivityLog[]
-  phoneChangeRequests PhoneChangeRequest[]
-  sessions            UserSession[]
+  requests                     ReportRequest[]       @relation("CustomerRequests")
+  assignedRequests             ReportRequest[]       @relation("AssignedAdminRequests")
+  payments                     Payment[]             @relation("CustomerPayments")
+  verifiedPayments             Payment[]             @relation("VerifiedPayments")
+  packages                     UserPackage[]
+  reports                      Report[]              @relation("CustomerReports")
+  uploadedReports              Report[]              @relation("UploadedReports")
+  otps                         OtpCode[]
+  messages                     Message[]             @relation("SenderMessages")
+  activityLogs                 ActivityLog[]
+  phoneChangeRequests          PhoneChangeRequest[]
+  sessions                     UserSession[]
+  supportConversations         SupportConversation[] @relation("CustomerSupportConversations")
+  assignedSupportConversations SupportConversation[] @relation("AssignedSupportConversations")
+  supportMessages              SupportMessage[]      @relation("SupportMessageSender")
+  notifications                Notification[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -400,4 +410,58 @@ model UserSession {
   @@index([userId])
   @@index([expiresAt])
   @@map("user_sessions")
+}
+
+model SupportConversation {
+  id                 String @id @default(cuid())
+  conversationNumber String @unique
+
+  customerId String
+  customer   User   @relation("CustomerSupportConversations", fields: [customerId], references: [id], onDelete: Cascade)
+
+  assignedAdminId String?
+  assignedAdmin   User?   @relation("AssignedSupportConversations", fields: [assignedAdminId], references: [id], onDelete: SetNull)
+
+  subject String?
+
+  status SupportConversationStatus @default(OPEN)
+
+  lastMessageAt DateTime  @default(now())
+  closedAt      DateTime?
+
+  messages SupportMessage[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([assignedAdminId])
+  @@index([status])
+  @@index([lastMessageAt])
+  @@map("support_conversations")
+}
+
+model SupportMessage {
+  id String @id @default(cuid())
+
+  conversationId String
+  conversation   SupportConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId String
+  sender   User   @relation("SupportMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
+
+  message       String
+  attachmentUrl String?
+
+  isReadByCustomer Boolean @default(false)
+  isReadByAdmin    Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([isReadByCustomer])
+  @@index([isReadByAdmin])
+  @@index([createdAt])
+  @@map("support_messages")
 }

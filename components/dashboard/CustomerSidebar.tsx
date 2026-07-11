@@ -15,6 +15,7 @@ import {
   PlusCircle,
   ShieldCheck,
   UserRound,
+  MessageCircle,
 } from "lucide-react";
 
 import Logo from "@/components/common/Logo";
@@ -56,6 +57,11 @@ const navItems = [
     href: "/payment-plans",
     icon: Package,
   },
+  {
+    label: "Support Chat",
+    href: "/dashboard/support",
+    icon: MessageCircle,
+  },
 ];
 
 export default function CustomerSidebar({ user }: CustomerSidebarProps) {
@@ -87,6 +93,9 @@ export default function CustomerSidebar({ user }: CustomerSidebarProps) {
       return (
         pathname === "/payment-plans" || pathname.startsWith("/payment-plans/")
       );
+    }
+    if (href === "/dashboard/support") {
+      return pathname === "/dashboard/support";
     }
 
     return pathname === href;
