@@ -10,9 +10,12 @@ import {
   Send,
   User,
   XCircle,
+  Paperclip,
+  X,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
+import MessageAttachment from "@/components/support-chat/MessageAttachment";
 
 type UserRole = "CUSTOMER" | "ADMIN" | "SUPER_ADMIN";
 
@@ -35,6 +38,10 @@ type SupportMessage = {
   senderId: string;
   message: string;
   attachmentUrl: string | null;
+  attachmentFileName: string | null;
+  attachmentFileType: string | null;
+  attachmentFileSize: number | null;
+  attachmentSignedUrl: string | null;
   isReadByCustomer: boolean;
   isReadByAdmin: boolean;
   createdAt: string;
@@ -170,7 +177,9 @@ export default function AdminSupportChat() {
   const [isSending, setIsSending] = useState(false);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
-
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const chatScrollRef = useRef<HTMLDivElement | null>(null);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
   const fetchConversations = useCallback(async () => {
@@ -285,32 +294,84 @@ export default function AdminSupportChat() {
   }, [fetchSelectedConversation, selectedConversationId]);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = chatScrollRef.current;
+
+    if (!container) {
+      return;
+    }
+
+    container.scrollTo({
+      top: container.scrollHeight,
+      behavior: "smooth",
+    });
   }, [selectedConversation?.messages?.length]);
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      setErrorMessage("Please upload a PDF, JPG, PNG, or WebP file.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage("Attachment must be less than 5MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setSelectedFile(file);
+    setErrorMessage("");
+  }
+
+  function clearSelectedFile() {
+    setSelectedFile(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
 
   async function handleSendReply(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
 
     const cleanMessage = replyMessage.trim();
 
-    if (!selectedConversationId || !cleanMessage || isSending) {
+    if (
+      !selectedConversationId ||
+      (!cleanMessage && !selectedFile) ||
+      isSending
+    ) {
       return;
     }
-
     try {
       setIsSending(true);
       setErrorMessage("");
+
+      const formData = new FormData();
+      formData.append("message", cleanMessage);
+
+      if (selectedFile) {
+        formData.append("attachment", selectedFile);
+      }
 
       const response = await fetch(
         `/api/admin/support-chat/${selectedConversationId}/messages`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            message: cleanMessage,
-          }),
+          body: formData,
         },
       );
 
@@ -325,6 +386,7 @@ export default function AdminSupportChat() {
       }
 
       setReplyMessage("");
+      clearSelectedFile();
       await fetchSelectedConversation(selectedConversationId);
       await fetchConversations();
     } catch (error) {
@@ -387,8 +449,8 @@ export default function AdminSupportChat() {
         </div>
       )}
 
-      <div className="grid min-h-[720px] overflow-hidden rounded-3xl border border-border bg-card shadow-sm lg:grid-cols-[380px_1fr]">
-        <aside className="border-b border-border bg-muted/20 lg:border-b-0 lg:border-r">
+      <div className="grid h-[calc(100vh-220px)] min-h-[640px] overflow-hidden rounded-3xl border border-border bg-card shadow-sm lg:grid-cols-[380px_1fr]">
+        <aside className="flex min-h-0 flex-col border-b border-border bg-muted/20 lg:border-b-0 lg:border-r">
           <div className="border-b border-border bg-background px-5 py-4">
             <div className="flex items-center justify-between gap-3">
               <div>
@@ -415,8 +477,7 @@ export default function AdminSupportChat() {
               </Button>
             </div>
           </div>
-
-          <div className="h-[300px] overflow-y-auto lg:h-[655px]">
+          <div className="min-h-0 flex-1 overflow-y-auto">
             {isListLoading ? (
               <div className="flex h-full items-center justify-center">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -447,7 +508,7 @@ export default function AdminSupportChat() {
                       key={conversation.id}
                       type="button"
                       onClick={() => handleSelectConversation(conversation.id)}
-                      className={`w-full px-5 py-4 text-left transition hover:bg-muted/70 ${
+                      className={`w-full px-5 py-4 text-left transition hover:bg-muted/70 cursor-pointer ${
                         isSelected ? "bg-muted" : "bg-transparent"
                       }`}
                     >
@@ -496,8 +557,7 @@ export default function AdminSupportChat() {
             )}
           </div>
         </aside>
-
-        <section className="flex min-h-[720px] flex-col">
+        <section className="flex min-h-0 flex-col overflow-hidden">
           {!selectedConversationId ? (
             <div className="flex flex-1 items-center justify-center px-6 text-center">
               <div>
@@ -598,7 +658,10 @@ export default function AdminSupportChat() {
                 </div>
               </div>
 
-              <div className="flex-1 overflow-y-auto px-4 py-5 sm:px-6">
+              <div
+                ref={chatScrollRef}
+                className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6"
+              >
                 {selectedConversation.messages.length === 0 ? (
                   <div className="flex h-full items-center justify-center text-center">
                     <p className="text-sm text-muted-foreground">
@@ -641,6 +704,14 @@ export default function AdminSupportChat() {
                               {chatMessage.message}
                             </p>
 
+                            <MessageAttachment
+                              fileName={chatMessage.attachmentFileName}
+                              fileType={chatMessage.attachmentFileType}
+                              fileSize={chatMessage.attachmentFileSize}
+                              signedUrl={chatMessage.attachmentSignedUrl}
+                              isMine={isAdmin}
+                            />
+
                             <p
                               className={`mt-2 text-right text-[11px] ${
                                 isAdmin
@@ -670,30 +741,76 @@ export default function AdminSupportChat() {
                   </div>
                 ) : (
                   <>
-                    <div className="flex flex-col gap-3 sm:flex-row">
-                      <textarea
-                        value={replyMessage}
-                        onChange={(event) =>
-                          setReplyMessage(event.target.value)
-                        }
-                        placeholder="Type admin reply..."
-                        rows={2}
-                        maxLength={1000}
-                        className="min-h-12 flex-1 resize-none rounded-2xl border border-input bg-background px-4 py-3 text-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
-                      />
+                    <div className="space-y-3">
+                      {selectedFile && (
+                        <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-muted/40 px-4 py-3 text-sm">
+                          <div className="min-w-0">
+                            <p className="truncate font-medium text-foreground">
+                              {selectedFile.name}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {(selectedFile.size / (1024 * 1024)).toFixed(2)}{" "}
+                              MB
+                            </p>
+                          </div>
 
-                      <Button
-                        type="submit"
-                        disabled={!replyMessage.trim() || isSending}
-                        className="h-12 rounded-2xl px-6 cursor-pointer"
-                      >
-                        {isSending ? (
-                          <Loader2 className="mr-2 size-4 animate-spin" />
-                        ) : (
-                          <Send className="mr-2 size-4" />
-                        )}
-                        Send Reply
-                      </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={clearSelectedFile}
+                            className="shrink-0 cursor-pointer"
+                          >
+                            <X className="size-4" />
+                          </Button>
+                        </div>
+                      )}
+
+                      <div className="flex flex-col gap-3 sm:flex-row">
+                        <input
+                          ref={fileInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png,image/webp,application/pdf"
+                          className="hidden"
+                          onChange={handleFileChange}
+                        />
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className="h-12 rounded-2xl px-4 cursor-pointer"
+                          onClick={() => fileInputRef.current?.click()}
+                        >
+                          <Paperclip className="mr-2 size-4" />
+                          Attach
+                        </Button>
+
+                        <textarea
+                          value={replyMessage}
+                          onChange={(event) =>
+                            setReplyMessage(event.target.value)
+                          }
+                          placeholder="Type admin reply..."
+                          rows={2}
+                          maxLength={1000}
+                          className="min-h-12 flex-1 resize-none rounded-2xl border border-input bg-background px-4 py-3 text-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
+                        />
+
+                        <Button
+                          type="submit"
+                          disabled={
+                            (!replyMessage.trim() && !selectedFile) || isSending
+                          }
+                          className="h-12 rounded-2xl px-6 cursor-pointer"
+                        >
+                          {isSending ? (
+                            <Loader2 className="mr-2 size-4 animate-spin" />
+                          ) : (
+                            <Send className="mr-2 size-4" />
+                          )}
+                          Send Reply
+                        </Button>
+                      </div>
                     </div>
 
                     <p className="mt-2 text-xs text-muted-foreground">

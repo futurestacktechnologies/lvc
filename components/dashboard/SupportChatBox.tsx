@@ -4,11 +4,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Loader2,
   MessageCircle,
+  Paperclip,
   RefreshCw,
   Send,
   ShieldCheck,
+  X,
 } from "lucide-react";
-
+import MessageAttachment from "@/components/support-chat/MessageAttachment";
 import { Button } from "@/components/ui/button";
 
 type SupportUser = {
@@ -24,6 +26,10 @@ type SupportMessage = {
   senderId: string;
   message: string;
   attachmentUrl: string | null;
+  attachmentFileName: string | null;
+  attachmentFileType: string | null;
+  attachmentFileSize: number | null;
+  attachmentSignedUrl: string | null;
   isReadByCustomer: boolean;
   isReadByAdmin: boolean;
   createdAt: string;
@@ -88,6 +94,8 @@ export default function SupportChatBox() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isStartingNewChat, setIsStartingNewChat] = useState(false);
   const bottomRef = useRef<HTMLDivElement | null>(null);
 
@@ -152,7 +160,46 @@ export default function SupportChatBox() {
     setIsStartingNewChat(true);
     setConversation(null);
     setMessage("");
+    clearSelectedFile();
     setErrorMessage("");
+  }
+
+  function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const allowedTypes = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ];
+
+    if (!allowedTypes.includes(file.type)) {
+      setErrorMessage("Please upload a PDF, JPG, PNG, or WebP file.");
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setErrorMessage("Attachment must be less than 5MB.");
+      event.target.value = "";
+      return;
+    }
+
+    setSelectedFile(file);
+    setErrorMessage("");
+  }
+
+  function clearSelectedFile() {
+    setSelectedFile(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   }
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
@@ -160,7 +207,7 @@ export default function SupportChatBox() {
 
     const cleanMessage = message.trim();
 
-    if (!cleanMessage || isSending) {
+    if ((!cleanMessage && !selectedFile) || isSending) {
       return;
     }
 
@@ -168,14 +215,16 @@ export default function SupportChatBox() {
       setIsSending(true);
       setErrorMessage("");
 
+      const formData = new FormData();
+      formData.append("message", cleanMessage);
+
+      if (selectedFile) {
+        formData.append("attachment", selectedFile);
+      }
+
       const response = await fetch("/api/support-chat/messages", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          message: cleanMessage,
-        }),
+        body: formData,
       });
 
       const result = (await response.json()) as {
@@ -189,6 +238,7 @@ export default function SupportChatBox() {
       }
 
       setMessage("");
+      clearSelectedFile();
       setIsStartingNewChat(false);
       await fetchConversation(false);
     } catch (error) {
@@ -294,6 +344,14 @@ export default function SupportChatBox() {
                       {chatMessage.message}
                     </p>
 
+                    <MessageAttachment
+                      fileName={chatMessage.attachmentFileName}
+                      fileType={chatMessage.attachmentFileType}
+                      fileSize={chatMessage.attachmentFileSize}
+                      signedUrl={chatMessage.attachmentSignedUrl}
+                      isMine={isMine}
+                    />
+
                     <p
                       className={`mt-2 text-right text-[11px] ${
                         isMine
@@ -344,32 +402,75 @@ export default function SupportChatBox() {
           </div>
         ) : (
           <>
-            <div className="flex flex-col gap-3 sm:flex-row">
-              <textarea
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                placeholder={
-                  conversation
-                    ? "Type your message..."
-                    : "Type your message to start a new chat..."
-                }
-                rows={2}
-                maxLength={1000}
-                className="min-h-12 flex-1 resize-none rounded-2xl border border-input bg-background px-4 py-3 text-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
-              />
+            <div className="space-y-3">
+              {selectedFile && (
+                <div className="flex items-center justify-between gap-3 rounded-2xl border border-border bg-muted/40 px-4 py-3 text-sm">
+                  <div className="min-w-0">
+                    <p className="truncate font-medium text-foreground">
+                      {selectedFile.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {(selectedFile.size / (1024 * 1024)).toFixed(2)} MB
+                    </p>
+                  </div>
 
-              <Button
-                type="submit"
-                disabled={!message.trim() || isSending}
-                className="h-12 rounded-2xl px-6"
-              >
-                {isSending ? (
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                ) : (
-                  <Send className="mr-2 size-4" />
-                )}
-                {conversation ? "Send" : "Start Chat"}
-              </Button>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSelectedFile}
+                    className="shrink-0 cursor-pointer"
+                  >
+                    <X className="size-4" />
+                  </Button>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-3 sm:flex-row">
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,application/pdf"
+                  className="hidden"
+                  onChange={handleFileChange}
+                />
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-12 rounded-2xl px-4 cursor-pointer"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Paperclip className="mr-2 size-4" />
+                  Attach
+                </Button>
+
+                <textarea
+                  value={message}
+                  onChange={(event) => setMessage(event.target.value)}
+                  placeholder={
+                    conversation
+                      ? "Type your message..."
+                      : "Type your message to start a new chat..."
+                  }
+                  rows={2}
+                  maxLength={1000}
+                  className="min-h-12 flex-1 resize-none rounded-2xl border border-input bg-background px-4 py-3 text-sm outline-none transition focus:border-ring focus:ring-2 focus:ring-ring/20"
+                />
+
+                <Button
+                  type="submit"
+                  disabled={(!message.trim() && !selectedFile) || isSending}
+                  className="h-12 rounded-2xl px-6 cursor-pointer"
+                >
+                  {isSending ? (
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                  ) : (
+                    <Send className="mr-2 size-4" />
+                  )}
+                  {conversation ? "Send" : "Start Chat"}
+                </Button>
+              </div>
             </div>
 
             <p className="mt-2 text-xs text-muted-foreground">

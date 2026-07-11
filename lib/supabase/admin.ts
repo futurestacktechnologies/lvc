@@ -16,6 +16,9 @@ export const PAYMENT_PROOF_BUCKET =
 
 export const REPORT_BUCKET = process.env.SUPABASE_REPORT_BUCKET || "reports";
 
+export const SUPPORT_CHAT_BUCKET =
+  process.env.SUPABASE_SUPPORT_CHAT_BUCKET || "support-chat";
+
 export const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey, {
   auth: {
     persistSession: false,

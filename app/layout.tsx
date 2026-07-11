@@ -7,6 +7,7 @@ import { APP } from "@/lib/constants";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { Toaster } from "@/components/ui/sonner";
+import FloatingSupportChatWidget from "@/components/support-chat/FloatingSupportChatWidget";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -30,6 +31,7 @@ export default function RootLayout({
       <body className={inter.className}>
         <ThemeProvider>
           {children}
+          <FloatingSupportChatWidget />
           <Toaster richColors position="top-right" />
         </ThemeProvider>
       </body>

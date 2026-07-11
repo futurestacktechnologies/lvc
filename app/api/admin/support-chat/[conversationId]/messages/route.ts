@@ -1,17 +1,10 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 
 import { requireAdminUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma/client";
+import { uploadSupportAttachment } from "@/lib/support-chat/attachment";
 
 export const runtime = "nodejs";
-
-const schema = z.object({
-  message: z
-    .string()
-    .min(1, "Message is required.")
-    .max(1000, "Message must be less than 1000 characters."),
-});
 
 type RouteContext = {
   params: Promise<{
@@ -24,14 +17,33 @@ export async function POST(request: Request, context: RouteContext) {
     const admin = await requireAdminUser();
     const { conversationId } = await context.params;
 
-    const body = await request.json();
-    const parsed = schema.safeParse(body);
+    const formData = await request.formData();
+    const messageValue = formData.get("message");
+    const attachmentValue = formData.get("attachment");
 
-    if (!parsed.success) {
+    const messageText =
+      typeof messageValue === "string" ? messageValue.trim() : "";
+
+    const attachment =
+      attachmentValue instanceof File && attachmentValue.size > 0
+        ? attachmentValue
+        : null;
+
+    if (!messageText && !attachment) {
       return NextResponse.json(
         {
           success: false,
-          message: parsed.error.issues[0]?.message || "Invalid message.",
+          message: "Please type a message or upload an attachment.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (messageText.length > 1000) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Message must be less than 1000 characters.",
         },
         { status: 400 },
       );
@@ -67,11 +79,32 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
+    let uploadedAttachment:
+      | {
+          attachmentUrl: string;
+          attachmentFileName: string;
+          attachmentFileType: string;
+          attachmentFileSize: number;
+        }
+      | undefined;
+
+    if (attachment) {
+      uploadedAttachment = await uploadSupportAttachment({
+        file: attachment,
+        userId: admin.id,
+        conversationId,
+      });
+    }
+
     const supportMessage = await prisma.supportMessage.create({
       data: {
         conversationId,
         senderId: admin.id,
-        message: parsed.data.message.trim(),
+        message: messageText || "Attachment",
+        attachmentUrl: uploadedAttachment?.attachmentUrl,
+        attachmentFileName: uploadedAttachment?.attachmentFileName,
+        attachmentFileType: uploadedAttachment?.attachmentFileType,
+        attachmentFileSize: uploadedAttachment?.attachmentFileSize,
         isReadByAdmin: true,
         isReadByCustomer: false,
       },
@@ -106,10 +139,15 @@ export async function POST(request: Request, context: RouteContext) {
   } catch (error) {
     console.error("Admin support reply failed:", error);
 
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Something went wrong while sending reply.";
+
     return NextResponse.json(
       {
         success: false,
-        message: "Something went wrong while sending reply.",
+        message,
       },
       { status: 500 },
     );

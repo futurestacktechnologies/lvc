@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 
 import { requireAdminUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma/client";
+import { createSupportAttachmentSignedUrl } from "@/lib/support-chat/attachment";
 
 export const runtime = "nodejs";
 
@@ -76,9 +77,21 @@ export async function GET(_request: Request, context: RouteContext) {
       },
     });
 
+    const messages = await Promise.all(
+      conversation.messages.map(async (message) => ({
+        ...message,
+        attachmentSignedUrl: message.attachmentUrl
+          ? await createSupportAttachmentSignedUrl(message.attachmentUrl)
+          : null,
+      })),
+    );
+
     return NextResponse.json({
       success: true,
-      conversation,
+      conversation: {
+        ...conversation,
+        messages,
+      },
     });
   } catch (error) {
     console.error("Admin support conversation fetch failed:", error);

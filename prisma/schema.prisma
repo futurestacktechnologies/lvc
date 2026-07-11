@@ -450,8 +450,12 @@ model SupportMessage {
   senderId String
   sender   User   @relation("SupportMessageSender", fields: [senderId], references: [id], onDelete: Cascade)
 
-  message       String
-  attachmentUrl String?
+  message String
+
+  attachmentUrl      String?
+  attachmentFileName String?
+  attachmentFileType String?
+  attachmentFileSize Int?
 
   isReadByCustomer Boolean @default(false)
   isReadByAdmin    Boolean @default(false)
