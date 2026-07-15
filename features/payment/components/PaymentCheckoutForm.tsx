@@ -215,16 +215,15 @@ export default function PaymentCheckoutForm({
   }
 
   return (
-    <div className="grid gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+    <div className="grid gap-5 lg:grid-cols-[0.9fr_1.1fr] lg:gap-8">
       {/* Left Column: Package & User details */}
-      <div className="space-y-6">
+      <div className="hidden space-y-6 lg:block">
         <Card className="overflow-hidden rounded-3xl border-0 shadow-xl shadow-slate-200/70">
           <div className="absolute -right-12 -top-12 h-40 w-40 rounded-full bg-brand/5 blur-2xl" />
-          <CardHeader className="relative">
+          <CardHeader className="relative p-5 sm:p-6">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-brand/20 to-brand/10 text-brand">
               <Package className="h-7 w-7" />
             </div>
-
             <div className="mt-2">
               <Badge className="mb-2 bg-secondary/80 text-secondary-foreground border-0">
                 Selected Package
@@ -276,7 +275,6 @@ export default function PaymentCheckoutForm({
             </div>
           </CardContent>
         </Card>
-
         <Card className="rounded-3xl border-0 shadow-xl shadow-slate-200/70">
           <CardHeader>
             <CardTitle className="text-xl font-semibold">
@@ -305,9 +303,8 @@ export default function PaymentCheckoutForm({
           </CardContent>
         </Card>
       </div>
-
       {/* Right Column: Checkout */}
-      <Card className="overflow-hidden rounded-3xl border-0 shadow-2xl shadow-slate-200/70">
+      <Card className="overflow-hidden rounded-[1.5rem] border-0 shadow-xl shadow-slate-200/70 sm:rounded-3xl lg:shadow-2xl">
         <div className="absolute -left-12 -top-12 h-48 w-48 rounded-full bg-brand/5 blur-3xl" />
         <CardHeader className="relative">
           <Badge className="w-fit gap-2 border-0 bg-gradient-to-r from-brand/20 to-brand/10 text-brand">
@@ -315,20 +312,21 @@ export default function PaymentCheckoutForm({
             Checkout
           </Badge>
 
-          <CardTitle className="mt-3 text-3xl font-extrabold tracking-tight">
+          <CardTitle className="mt-3 text-2xl font-extrabold tracking-tight sm:text-3xl">
             Choose your payment method
           </CardTitle>
 
-          <p className="mt-2 text-sm leading-7 text-muted-foreground">
-            Select your preferred payment method. You can either pay via bank
-            transfer by uploading a receipt, or pay online using a debit/credit
-            card.
+          <p className="mt-2 text-sm leading-6 text-muted-foreground sm:leading-7">
+            Select your preferred payment method.
+            <span className="hidden sm:inline">
+              You can either pay via bank transfer by uploading a receipt, or
+              pay using online payment methods.
+            </span>
           </p>
         </CardHeader>
-
         <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="grid gap-4 sm:grid-cols-2">
+          <form onSubmit={handleSubmit} className="space-y-5 sm:space-y-8">
+            <div className="grid gap-3 sm:grid-cols-2 sm:gap-4">
               <PaymentMethodCard
                 active={paymentMethod === "BANK_TRANSFER"}
                 icon={<Building2 className="h-6 w-6" />}
@@ -345,10 +343,9 @@ export default function PaymentCheckoutForm({
                 onClick={() => setPaymentMethod("ONLINE_GATEWAY")}
               />
             </div>
-
             {paymentMethod === "BANK_TRANSFER" && (
-              <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
-                <div className="rounded-2xl border border-border bg-slate-50/80 p-6 dark:bg-slate-800/50">
+              <div className="space-y-5 animate-in fade-in slide-in-from-top-4 duration-300 sm:space-y-6">
+                <div className="rounded-2xl border border-border bg-slate-50/80 p-4 dark:bg-slate-800/50 sm:p-6">
                   <div className="flex items-start gap-4">
                     <div className="rounded-xl bg-brand/10 p-3 text-brand">
                       <Building2 className="h-5 w-5" />
@@ -378,8 +375,8 @@ export default function PaymentCheckoutForm({
                       </div>
 
                       <p className="mt-4 text-xs leading-5 text-muted-foreground">
-                        Once you done the payment please upload the payment
-                        proof below.
+                        After completing the transfer, upload your payment
+                        receipt below.
                       </p>
                     </div>
                   </div>
@@ -394,7 +391,7 @@ export default function PaymentCheckoutForm({
                   <label
                     htmlFor="paymentProof"
                     className={cn(
-                      "flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-background px-6 py-8 text-center transition",
+                      "flex cursor-pointer flex-col items-center justify-center rounded-2xl border-2 border-dashed border-border bg-background px-4 py-6 text-center transition sm:px-6 sm:py-8",
                       "hover:border-brand hover:bg-secondary/40",
                       paymentProof && "border-brand bg-secondary/30",
                     )}
@@ -435,9 +432,8 @@ export default function PaymentCheckoutForm({
                 </div>
               </div>
             )}
-
             {paymentMethod === "ONLINE_GATEWAY" && (
-              <div className="rounded-2xl border border-border bg-slate-50/80 p-6 dark:bg-slate-800/50 animate-in fade-in slide-in-from-top-4 duration-300">
+              <div className="animate-in fade-in slide-in-from-top-4 rounded-2xl border border-border bg-slate-50/80 p-4 duration-300 dark:bg-slate-800/50 sm:p-6">
                 <div className="flex items-start gap-4">
                   <div className="rounded-xl bg-brand/10 p-3 text-brand">
                     <CreditCard className="h-5 w-5" />
@@ -447,33 +443,33 @@ export default function PaymentCheckoutForm({
                     <p className="font-semibold text-foreground">
                       Pay securely with PayHere
                     </p>
-
                     <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                      You will be redirected to PayHere to complete the payment
-                      using a debit card, credit card, or another supported
-                      online payment method. Your package credits will be
-                      activated automatically after PayHere confirms the
-                      payment.
+                      You will be redirected to PayHere to complete your payment
+                      securely.
+                      <span className="hidden sm:inline">
+                        {" "}
+                        Your package credits will be activated automatically
+                        after PayHere confirms the payment.
+                      </span>
                     </p>
                   </div>
                 </div>
               </div>
             )}
-            <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/80 p-6 dark:from-slate-800/50 dark:to-slate-900/50">
-              <div className="flex items-center justify-between">
+            <div className="rounded-2xl bg-gradient-to-br from-slate-50 to-slate-100/80 p-4 dark:from-slate-800/50 dark:to-slate-900/50 sm:p-6">
+              <div className="flex items-center justify-between gap-4">
                 <p className="text-sm font-medium text-muted-foreground">
                   Total Amount
                 </p>
-                <p className="text-2xl font-bold text-foreground">
+                <p className="text-xl font-bold text-foreground sm:text-2xl">
                   {plan.currency} {plan.price.toLocaleString()}
                 </p>
               </div>
             </div>
-
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="h-12 w-full cursor-pointer text-base"
+              className="h-12 w-full cursor-pointer rounded-2xl text-sm font-semibold sm:text-base"
             >
               {isSubmitting
                 ? "Submitting..."
@@ -506,7 +502,7 @@ function PaymentMethodCard({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-2xl border-2 p-5 text-left transition-all duration-300 cursor-pointer",
+        "cursor-pointer rounded-2xl border-2 p-4 text-left transition-all duration-300 sm:p-5",
         active
           ? "border-brand bg-secondary/80 text-foreground shadow-lg shadow-brand/20"
           : "border-border bg-background text-muted-foreground hover:border-brand/50 hover:bg-secondary/20",
@@ -523,8 +519,8 @@ function PaymentMethodCard({
         {icon}
       </div>
 
-      <p className="mt-4 font-semibold">{title}</p>
-      <p className="mt-1 text-sm leading-6 text-muted-foreground">
+      <p className="mt-3 font-semibold sm:mt-4">{title}</p>
+      <p className="mt-1 hidden text-sm leading-6 text-muted-foreground sm:block">
         {description}
       </p>
     </button>
@@ -533,9 +529,11 @@ function PaymentMethodCard({
 
 function BankDetail({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-4 border-b border-border/50 py-2 last:border-0 last:pb-0">
+    <div className="flex flex-col gap-1 border-b border-border/50 py-2 last:border-0 last:pb-0 sm:flex-row sm:justify-between sm:gap-4">
       <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-semibold text-foreground">{value}</span>
+      <span className="font-semibold text-foreground sm:text-right">
+        {value}
+      </span>
     </div>
   );
 }

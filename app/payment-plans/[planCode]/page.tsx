@@ -53,43 +53,44 @@ export default async function PaymentPlanCheckoutPage({
         role: user.role,
       }}
     >
-      <div className="space-y-8">
+      <div className="space-y-5 sm:space-y-8">
         <section className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
-          <div className="relative p-6 sm:p-8">
+          <div className="relative p-5 sm:p-8">
             <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-brand/10 blur-3xl" />
             <div className="absolute bottom-0 left-10 h-32 w-32 rounded-full bg-amber-300/20 blur-3xl" />
-
             <div className="relative flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p className="inline-flex items-center rounded-full bg-secondary px-3 py-1 text-xs font-semibold text-brand">
                   Package Checkout
                 </p>
 
-                <h1 className="mt-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                  Complete Package Purchase
+                <h1 className="mt-4 text-2xl font-bold tracking-tight text-foreground sm:text-4xl">
+                  Complete Purchase
                 </h1>
 
-                <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
-                  Review your selected package and complete the payment process.
-                  Once verified, your request credits will be activated.
+                <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:leading-7">
+                  Review your selected package and complete the payment.
+                  <span className="hidden sm:inline">
+                    Once verified, your request credits will be activated.
+                  </span>
                 </p>
               </div>
 
               <div className="flex flex-col gap-3 sm:flex-row">
-                <Link href="/payment-plans">
+                <Link href="/payment-plans" className="w-full sm:w-auto">
                   <Button
                     variant="outline"
-                    className="cursor-pointer rounded-2xl"
+                    className="w-full cursor-pointer rounded-2xl sm:w-auto"
                   >
                     <ArrowLeft className="mr-2 h-4 w-4" />
                     Payment Plans
                   </Button>
                 </Link>
 
-                <Link href="/dashboard">
+                <Link href="/dashboard" className="w-full sm:w-auto">
                   <Button
                     variant="outline"
-                    className="cursor-pointer rounded-2xl"
+                    className="w-full cursor-pointer rounded-2xl sm:w-auto"
                   >
                     Dashboard
                   </Button>
@@ -98,8 +99,7 @@ export default async function PaymentPlanCheckoutPage({
             </div>
           </div>
         </section>
-
-        <section className="grid gap-5 md:grid-cols-3">
+        <section className="hidden gap-5 md:grid md:grid-cols-3">
           <CheckoutInfoCard
             title="Selected Plan"
             value={plan.name}
@@ -120,6 +120,44 @@ export default async function PaymentPlanCheckoutPage({
             description="Credits activate after payment approval"
             icon={<ShieldCheck className="h-5 w-5" />}
           />
+        </section>
+
+        <section className="rounded-[1.5rem] border border-border bg-card p-5 shadow-sm md:hidden">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+                Selected Package
+              </p>
+
+              <h2 className="mt-2 text-xl font-bold text-foreground">
+                {plan.name}
+              </h2>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                {plan.requestCredits} report{" "}
+                {plan.requestCredits > 1 ? "credits" : "credit"}
+              </p>
+            </div>
+
+            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary text-brand">
+              <Package className="h-5 w-5" />
+            </div>
+          </div>
+
+          <div className="mt-5 rounded-2xl bg-muted/60 p-4">
+            <p className="text-xs font-medium text-muted-foreground">
+              Total Amount
+            </p>
+
+            <p className="mt-1 text-2xl font-bold text-foreground">
+              {plan.currency} {plan.price.toLocaleString()}
+            </p>
+          </div>
+
+          <p className="mt-4 text-xs leading-5 text-muted-foreground">
+            Choose your payment method below. Your credits will activate after
+            successful payment verification.
+          </p>
         </section>
 
         <PaymentCheckoutForm

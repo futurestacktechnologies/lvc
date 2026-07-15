@@ -31,7 +31,7 @@ export default function CTA() {
 
             <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
               <Link
-                href="/register"
+                href="/dashboard/report-requests/new"
                 className={cn(
                   buttonVariants({ variant: "secondary" }),
                   "h-12 min-w-44 text-base font-semibold",

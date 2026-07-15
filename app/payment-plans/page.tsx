@@ -49,14 +49,17 @@ export default async function PaymentPlansPage() {
                 Payment Plans
               </Badge>
 
-              <h1 className="mt-4 max-w-3xl text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Select a package to request Japanese vehicle reports
+              <h1 className="mt-4 max-w-3xl text-2xl font-bold tracking-tight text-foreground sm:text-4xl">
+                Select a vehicle report package
               </h1>
 
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
-                Choose a request package based on how many vehicle reports you
-                need. After payment verification, your request credits will be
-                added to your account.
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:leading-7">
+                Choose a package based on how many vehicle reports you need.
+                <span className="hidden sm:inline">
+                  {" "}
+                  After payment verification, your request credits will be added
+                  to your account.
+                </span>
               </p>
             </div>
 
@@ -78,7 +81,7 @@ export default async function PaymentPlansPage() {
       </section>
 
       {user && (
-        <section className="grid gap-5 md:grid-cols-3">
+        <section className="hidden gap-5 md:grid md:grid-cols-3">
           <PlanInfoCard
             title="Flexible Credits"
             description="Use your package credits for vehicle report requests anytime."
@@ -116,7 +119,7 @@ export default async function PaymentPlansPage() {
           </CardContent>
         </Card>
       ) : (
-        <section className="grid gap-6 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid gap-4 sm:gap-6 md:grid-cols-2 xl:grid-cols-4">
           {plans.map((plan) => {
             const pricePerRequest = Math.round(
               plan.price / plan.requestCredits,
@@ -143,7 +146,7 @@ export default async function PaymentPlansPage() {
                   </div>
                 )}
 
-                <CardHeader className="pb-4 pt-7">
+                <CardHeader className="pb-3 pt-5 sm:pb-4 sm:pt-7">
                   <div
                     className={cn(
                       "flex h-14 w-14 items-center justify-center rounded-2xl",
@@ -154,12 +157,10 @@ export default async function PaymentPlansPage() {
                   >
                     <Package className="h-7 w-7" />
                   </div>
-
-                  <div className="mt-6">
-                    <h2 className="text-2xl font-bold text-foreground">
+                  <div className="mt-4 sm:mt-6">
+                    <h2 className="text-xl font-bold text-foreground sm:text-2xl">
                       {plan.name}
                     </h2>
-
                     <p className="mt-1 text-sm text-muted-foreground">
                       {plan.requestCredits} report{" "}
                       {plan.requestCredits > 1 ? "requests" : "request"}
@@ -174,7 +175,7 @@ export default async function PaymentPlansPage() {
                     </p>
 
                     <div className="mt-1 flex items-end justify-center gap-1">
-                      <span className="text-4xl font-bold text-foreground">
+                      <span className="text-3xl font-bold text-foreground sm:text-4xl">
                         {plan.price.toLocaleString()}
                       </span>
 
@@ -187,8 +188,18 @@ export default async function PaymentPlansPage() {
                       Around LKR {pricePerRequest.toLocaleString()} per request
                     </p>
                   </div>
+                  <div className="rounded-2xl border border-border bg-background/70 p-4 sm:hidden">
+                    <p className="text-sm font-medium text-foreground">
+                      Includes {plan.requestCredits} report{" "}
+                      {plan.requestCredits > 1 ? "credits" : "credit"}
+                    </p>
+                    <p className="mt-1 text-xs leading-5 text-muted-foreground">
+                      Dashboard tracking, report delivery, and customer support
+                      included.
+                    </p>
+                  </div>
 
-                  <div className="space-y-3">
+                  <div className="hidden space-y-3 sm:block">
                     <PlanFeature>
                       {plan.requestCredits} vehicle report request credits
                     </PlanFeature>
@@ -228,10 +239,14 @@ export default async function PaymentPlansPage() {
               Payment verification process
             </p>
 
-            <p className="mt-2 max-w-3xl text-sm leading-7 text-muted-foreground">
+            <p className="mt-2 max-w-3xl text-sm leading-6 text-muted-foreground sm:leading-7">
               Bank transfer and online payment options are available in the next
-              step. For bank transfer, upload your payment proof as an image or
-              PDF. Admin will verify it and activate your package credits.
+              step.
+              <span className="hidden sm:inline">
+                {" "}
+                For bank transfer, upload your payment proof as an image or PDF.
+                Admin will verify it and activate your package credits.
+              </span>
             </p>
           </div>
         </div>

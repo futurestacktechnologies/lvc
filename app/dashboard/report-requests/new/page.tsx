@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import {
-  AlertCircle,
   CreditCard,
   FileText,
   Package,
@@ -13,7 +12,6 @@ import { getCurrentUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import NewReportRequestForm from "@/components/dashboard/NewReportRequestForm";
 import { UserPackageStatus } from "@/generated/prisma";
 
@@ -53,9 +51,9 @@ export default async function NewReportRequestPage() {
   const primaryPackage = activePackages[0] || null;
 
   return (
-    <div className="space-y-8">
+    <div className="space-y-5 sm:space-y-8">
       <section className="overflow-hidden rounded-[2rem] border border-border bg-card shadow-sm">
-        <div className="relative p-6 sm:p-8">
+        <div className="relative p-5 sm:p-8">
           <div className="absolute right-0 top-0 h-40 w-40 rounded-full bg-brand/10 blur-3xl" />
           <div className="absolute bottom-0 left-10 h-32 w-32 rounded-full bg-amber-300/20 blur-3xl" />
 
@@ -65,32 +63,37 @@ export default async function NewReportRequestPage() {
                 New Vehicle Report
               </p>
 
-              <h1 className="mt-4 text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-                Submit a Report Request
+              <h1 className="mt-4 text-2xl font-bold tracking-tight text-foreground sm:text-4xl">
+                Submit Report Request
               </h1>
-
-              <p className="mt-3 max-w-2xl text-sm leading-7 text-muted-foreground">
-                Enter either chassis/VIN details or auction lot details. Our
-                admin team will manually verify the vehicle information and
-                deliver a professional PDF report to your account.
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground sm:leading-7">
+                Enter chassis/VIN details or auction lot details.
+                <span className="hidden sm:inline">
+                  {" "}
+                  Our admin team will manually verify the vehicle information
+                  and deliver a professional PDF report to your account.
+                </span>
               </p>
             </div>
 
             <div className="flex flex-col gap-3 sm:flex-row">
-              <Link href="/dashboard/report-requests">
+              <Link
+                href="/dashboard/report-requests"
+                className="w-full sm:w-auto"
+              >
                 <Button
                   variant="outline"
-                  className="cursor-pointer rounded-2xl"
+                  className="w-full cursor-pointer rounded-2xl sm:w-auto"
                 >
                   <FileText className="mr-2 h-4 w-4" />
                   My Requests
                 </Button>
               </Link>
 
-              <Link href="/payment-plans">
+              <Link href="/payment-plans" className="w-full sm:w-auto">
                 <Button
                   variant="outline"
-                  className="cursor-pointer rounded-2xl"
+                  className="w-full cursor-pointer rounded-2xl sm:w-auto"
                 >
                   <Package className="mr-2 h-4 w-4" />
                   Buy Package
@@ -100,144 +103,74 @@ export default async function NewReportRequestPage() {
           </div>
         </div>
       </section>
+      <section className="rounded-[1.5rem] border border-border bg-card p-5 shadow-sm md:hidden">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wide text-brand">
+              Available Credits
+            </p>
 
-      <section className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-        <Card className="rounded-[2rem]">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Available Credits
-                </p>
-                <p className="mt-3 text-3xl font-bold text-foreground">
-                  {availableCredits}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Ready to use for new requests
-                </p>
-              </div>
+            <p className="mt-2 text-3xl font-bold text-foreground">
+              {availableCredits}
+            </p>
 
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-brand">
-                <ShieldCheck className="h-5 w-5" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {activePackages.length > 0
+                ? `${activePackages.length} active package${activePackages.length > 1 ? "s" : ""}`
+                : "No active package"}
+            </p>
+          </div>
 
-        <Card className="rounded-[2rem]">
-          <CardContent className="p-5">
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">
-                  Active Packages
-                </p>
-                <p className="mt-3 text-3xl font-bold text-foreground">
-                  {activePackages.length}
-                </p>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Packages with remaining credits
-                </p>
-              </div>
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-secondary text-brand">
+            <ShieldCheck className="h-5 w-5" />
+          </div>
+        </div>
 
-              <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-secondary text-brand">
-                <Package className="h-5 w-5" />
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {primaryPackage && (
+          <div className="mt-5 rounded-2xl bg-muted/60 p-4">
+            <p className="text-xs font-medium text-muted-foreground">
+              Using Package
+            </p>
 
-        <Card className="rounded-[2rem] md:col-span-2 xl:col-span-1">
-          <CardContent className="p-5">
-            {primaryPackage ? (
-              <div>
-                <div className="flex items-start justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-medium text-muted-foreground">
-                      Using Package
-                    </p>
-                    <p className="mt-3 font-bold text-foreground">
-                      {primaryPackage.plan.name}
-                    </p>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      {primaryPackage.packageNumber}
-                    </p>
-                  </div>
+            <p className="mt-1 truncate text-sm font-semibold text-foreground">
+              {primaryPackage.plan.name}
+            </p>
 
-                  <Badge className="border-emerald-200 bg-emerald-50 text-emerald-700 ring-1 ring-emerald-500/30">
-                    ACTIVE
-                  </Badge>
-                </div>
-
-                <div className="mt-4 h-3 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className="h-full rounded-full bg-brand"
-                    style={{
-                      width: `${Math.max(
-                        5,
-                        Math.min(
-                          100,
-                          (primaryPackage.remainingRequests /
-                            primaryPackage.totalRequests) *
-                            100,
-                        ),
-                      )}%`,
-                    }}
-                  />
-                </div>
-
-                <p className="mt-3 text-sm text-muted-foreground">
-                  {primaryPackage.remainingRequests} of{" "}
-                  {primaryPackage.totalRequests} credits remaining
-                </p>
-              </div>
-            ) : (
-              <div className="flex items-start gap-3">
-                <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-50 text-amber-600">
-                  <AlertCircle className="h-5 w-5" />
-                </div>
-
-                <div>
-                  <p className="font-semibold text-foreground">
-                    No active package
-                  </p>
-                  <p className="mt-1 text-sm leading-6 text-muted-foreground">
-                    Buy a package before submitting a new report request.
-                  </p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {primaryPackage.remainingRequests} of{" "}
+              {primaryPackage.totalRequests} credits remaining
+            </p>
+          </div>
+        )}
       </section>
-
       {availableCredits <= 0 ? (
         <Card className="rounded-[2rem]">
-          <CardContent className="p-8 text-center">
+          <CardContent className="p-6 text-center sm:p-8">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-secondary text-brand">
               <CreditCard className="h-7 w-7" />
             </div>
-
-            <h2 className="mt-5 text-2xl font-bold text-foreground">
+            <h2 className="mt-5 text-xl font-bold text-foreground sm:text-2xl">
               You need request credits
             </h2>
-
             <p className="mx-auto mt-3 max-w-xl text-sm leading-7 text-muted-foreground">
               You do not have any active report credits at the moment. Please
               buy a package to submit a new Japanese vehicle report request.
             </p>
-
             <div className="mt-6 flex flex-col justify-center gap-3 sm:flex-row">
-              <Link href="/payment-plans">
-                <Button className="cursor-pointer rounded-2xl">
+              <Link href="/payment-plans" className="w-full sm:w-auto">
+                <Button className="w-full cursor-pointer rounded-2xl sm:w-auto">
                   <Package className="mr-2 h-4 w-4" />
                   View Payment Plans
                 </Button>
               </Link>
 
-              <Link href="/dashboard/report-requests">
+              <Link
+                href="/dashboard/report-requests"
+                className="w-full sm:w-auto"
+              >
                 <Button
                   variant="outline"
-                  className="cursor-pointer rounded-2xl"
+                  className="w-full cursor-pointer rounded-2xl sm:w-auto"
                 >
                   My Requests
                 </Button>
@@ -246,8 +179,8 @@ export default async function NewReportRequestPage() {
           </CardContent>
         </Card>
       ) : (
-        <section className="grid gap-6 xl:grid-cols-3">
-          <Card className="rounded-[2rem] xl:col-span-2">
+        <section className="grid gap-5 xl:grid-cols-3 xl:gap-6">
+          <Card className="rounded-[1.5rem] sm:rounded-[2rem] xl:col-span-2">
             <CardHeader>
               <div>
                 <CardTitle className="flex items-center gap-2">
@@ -266,7 +199,7 @@ export default async function NewReportRequestPage() {
             </CardContent>
           </Card>
 
-          <Card className="rounded-[2rem]">
+          <Card className="hidden rounded-[2rem] xl:block">
             <CardHeader>
               <CardTitle>How it works</CardTitle>
             </CardHeader>
