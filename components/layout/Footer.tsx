@@ -10,11 +10,10 @@ const footerLinks = [
     title: "Company",
     links: [
       { label: "Home", href: "/" },
-      { label: "How It Works", href: "#how-it-works" },
+      { label: "How It Works", href: "/#how-it-works" },
       { label: "What You Get", href: "#what-you-get" },
       { label: "Pricing", href: "#pricing" },
       { label: "FAQ", href: "#faq" },
-      { label: "Support", href: "#support" },
     ],
   },
   {
@@ -22,8 +21,16 @@ const footerLinks = [
     links: [
       { label: "Login", href: "/login" },
       { label: "Create Account", href: "/register" },
-      { label: "Request Report", href: "/register" },
+      { label: "Request Report", href: "/dashboard/report-requests/new" },
       { label: "Sample Report", href: "#" },
+    ],
+  },
+  {
+    title: "Legal",
+    links: [
+      { label: "Privacy Policy", href: "/privacy-policy" },
+      { label: "Terms & Conditions", href: "/terms-and-conditions" },
+      { label: "Refund Policy", href: "/refund-policy" },
     ],
   },
 ];
@@ -32,7 +39,7 @@ export default function Footer() {
   return (
     <footer className="border-t border-border bg-card">
       <Container>
-        <div className="grid gap-10 py-12 lg:grid-cols-[1.4fr_1fr_1fr]">
+        <div className="grid gap-10 py-12 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
           <div>
             <Logo />
 
@@ -92,7 +99,7 @@ export default function Footer() {
             © {new Date().getFullYear()} {APP.company}. All rights reserved.
           </p>
 
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <a
               href={`mailto:${APP.supportEmail}`}
               className="inline-flex items-center gap-2 transition hover:text-brand"
@@ -100,16 +107,6 @@ export default function Footer() {
               <Mail className="h-4 w-4" />
               {APP.supportEmail}
             </a>
-
-            <span className="hidden text-border sm:block">|</span>
-
-            <Link href="/privacy" className="transition hover:text-brand">
-              Privacy Policy
-            </Link>
-
-            <Link href="/terms" className="transition hover:text-brand">
-              Terms
-            </Link>
           </div>
         </div>
       </Container>

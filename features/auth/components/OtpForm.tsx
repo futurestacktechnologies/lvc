@@ -195,7 +195,7 @@ export default function OtpForm() {
     if (userRole === "ADMIN" || userRole === "SUPER_ADMIN") {
       router.push("/admin");
     } else {
-      router.push("/dashboard");
+      router.push("/");
     }
   }
 

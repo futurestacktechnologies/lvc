@@ -134,7 +134,7 @@ export async function POST(request: Request) {
 
         first_name: firstName,
         last_name: lastName,
-        email: "support@enfieldnexus.com",
+        email: "info@enfieldnexus.com",
         phone: user.phone,
         address: "Online Customer",
         city: "Colombo",
