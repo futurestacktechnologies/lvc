@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, ShieldAlert, Trash2, XCircle } from "lucide-react";
-
+import Link from "next/link";
 import ActionConfirmDialog from "@/components/common/ActionConfirmDialog";
 import AdminDataTable, {
   type AdminDataTableColumn,
@@ -43,10 +43,14 @@ export default function AdminUsersTable({
       id: "user",
       header: "User",
       cell: (user) => (
-        <div className="flex flex-col">
+        <Link
+          href={`/admin/users/${user.id}`}
+          className="flex flex-col hover:opacity-80"
+        >
           <span className="font-medium text-foreground">{user.name}</span>
+
           <span className="text-xs text-muted-foreground">{user.id}</span>
-        </div>
+        </Link>
       ),
     },
     {

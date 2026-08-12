@@ -85,7 +85,7 @@ export default function ChangePhoneForm() {
             placeholder="+94 77 123 4567"
           />
 
-          <Button className="h-12 w-full text-base">
+          <Button className="h-12 w-full text-base cursor-pointer">
             Send OTP to Old Phone
           </Button>
         </form>

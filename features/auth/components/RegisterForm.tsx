@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Phone, UserRound } from "lucide-react";
+import { Phone, Tag, UserRound } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -122,10 +122,33 @@ export default function RegisterForm() {
           )}
         </div>
 
+        <div className="space-y-2">
+          <Label htmlFor="promoCode">
+            Promo Code <span className="text-muted-foreground">(Optional)</span>
+          </Label>
+
+          <div className="relative">
+            <Tag className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
+
+            <Input
+              id="promoCode"
+              placeholder="Enter Promo Code if you have one"
+              className="h-12 pl-11 uppercase"
+              {...register("promoCode")}
+            />
+          </div>
+
+          {errors.promoCode && (
+            <p className="text-sm font-medium text-destructive">
+              {errors.promoCode.message}
+            </p>
+          )}
+        </div>
+
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="h-12 w-full text-base"
+          className="h-12 w-full text-base cursor-pointer"
         >
           {isSubmitting ? "Sending OTP..." : "Create Account"}
         </Button>

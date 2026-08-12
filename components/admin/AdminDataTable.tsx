@@ -332,7 +332,7 @@ export default function AdminDataTable<T extends { id: string }>({
               size="sm"
               disabled={currentPage <= 1}
               onClick={() => goToPage(currentPage - 1)}
-              className="h-9 rounded-xl"
+              className="h-9 rounded-xl cursor-pointer"
             >
               <ChevronLeft className="mr-1 h-4 w-4" />
               Previous
@@ -348,7 +348,7 @@ export default function AdminDataTable<T extends { id: string }>({
               size="sm"
               disabled={currentPage >= totalPages}
               onClick={() => goToPage(currentPage + 1)}
-              className="h-9 rounded-xl"
+              className="h-9 rounded-xl cursor-pointer"
             >
               Next
               <ChevronRight className="ml-1 h-4 w-4" />

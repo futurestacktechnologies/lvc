@@ -17,6 +17,13 @@ export const registerSchema = z.object({
     .min(2, "Full name must be at least 2 characters"),
 
   phone: phoneValidation,
+
+  promoCode: z
+    .string()
+    .trim()
+    .max(50, "Promo code is too long")
+    .optional()
+    .or(z.literal("")),
 });
 
 export const otpSchema = z.object({

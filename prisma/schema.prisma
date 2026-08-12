@@ -93,15 +93,22 @@ enum SupportConversationStatus {
   CLOSED
 }
 
-model User {
-  id            String     @id @default(cuid())
-  name          String
-  phone         String     @unique
-  role          UserRole   @default(CUSTOMER)
-  status        UserStatus @default(ACTIVE)
-  phoneVerified Boolean    @default(false)
-  lastLoginAt   DateTime?
+enum AgentStatus {
+  ACTIVE
+  INACTIVE
+  BLOCKED
+}
 
+model User {
+  id                           String                @id @default(cuid())
+  name                         String
+  phone                        String                @unique
+  role                         UserRole              @default(CUSTOMER)
+  status                       UserStatus            @default(ACTIVE)
+  phoneVerified                Boolean               @default(false)
+  lastLoginAt                  DateTime?
+  agentId                      String?
+  agent                        Agent?                @relation(fields: [agentId], references: [id], onDelete: SetNull)
   requests                     ReportRequest[]       @relation("CustomerRequests")
   assignedRequests             ReportRequest[]       @relation("AssignedAdminRequests")
   payments                     Payment[]             @relation("CustomerPayments")
@@ -118,13 +125,32 @@ model User {
   assignedSupportConversations SupportConversation[] @relation("AssignedSupportConversations")
   supportMessages              SupportMessage[]      @relation("SupportMessageSender")
   notifications                Notification[]
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt                    DateTime              @default(now())
+  updatedAt                    DateTime              @updatedAt
 
   @@index([role])
   @@index([status])
   @@map("users")
+}
+
+model Agent {
+  id            String      @id @default(cuid())
+  name          String
+  mobile        String
+  address       String
+  nicDlUrl      String?
+  nicDlFileName String?
+  nicDlFileType String?
+  nicDlFileSize Int?
+  promoCode     String      @unique
+  status        AgentStatus @default(ACTIVE)
+  customers     User[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([mobile])
+  @@index([status])
+  @@map("agents")
 }
 
 model OtpCode {

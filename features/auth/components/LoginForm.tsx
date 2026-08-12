@@ -109,7 +109,7 @@ export default function LoginForm() {
         <Button
           type="submit"
           disabled={isSubmitting}
-          className="h-12 w-full text-base"
+          className="h-12 w-full text-base cursor-pointer"
         >
           {isSubmitting ? "Sending OTP..." : "Send OTP"}
         </Button>
