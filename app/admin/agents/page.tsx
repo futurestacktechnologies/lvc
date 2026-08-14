@@ -1,8 +1,9 @@
-import { CheckCircle2, ShieldAlert, UsersRound } from "lucide-react";
-
-import { Prisma, AgentStatus } from "@/generated/prisma";
+import { CheckCircle2, ShieldAlert, UsersRound, Wallet } from "lucide-react";
+import Link from "next/link";
+import { Prisma, AgentStatus, AgentCommissionStatus } from "@/generated/prisma";
 import { prisma } from "@/lib/prisma/client";
-
+import { PlusCircle } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import AdminAgentsTable from "@/components/admin/AdminAgentsTable";
 
 function parseFilters(searchParams: {
@@ -129,45 +130,124 @@ export default async function AdminAgentsPage({
     },
   });
 
-  const [totalAgents, activeAgents, blockedAgents, referredCustomers] =
-    await Promise.all([
-      prisma.agent.count(),
+  /*
+   * --------------------------------------------------------------------------
+   * COMMISSION CALCULATION
+   * --------------------------------------------------------------------------
+   *
+   * Agent commission = 5% of PAID payments made by referred customers.
+   *
+   * AgentCommission is the source of truth for commission records.
+   */
 
-      prisma.agent.count({
-        where: {
-          status: AgentStatus.ACTIVE,
-        },
-      }),
+  const agentIds = agents.map((agent) => agent.id);
 
-      prisma.agent.count({
-        where: {
-          status: AgentStatus.BLOCKED,
-        },
-      }),
-
-      prisma.user.count({
-        where: {
-          agentId: {
-            not: null,
+  const commissionTotals =
+    agentIds.length > 0
+      ? await prisma.agentCommission.groupBy({
+          by: ["agentId"],
+          where: {
+            agentId: {
+              in: agentIds,
+            },
+            status: {
+              in: [AgentCommissionStatus.PENDING, AgentCommissionStatus.PAID],
+            },
           },
-        },
-      }),
-    ]);
+          _sum: {
+            paymentAmount: true,
+            commissionAmount: true,
+          },
+        })
+      : [];
 
-  const tableAgents = agents.map((agent) => ({
-    id: agent.id,
-    name: agent.name,
-    mobile: agent.mobile,
-    address: agent.address,
-    nicDlUrl: agent.nicDlUrl,
-    nicDlFileName: agent.nicDlFileName,
-    nicDlFileType: agent.nicDlFileType,
-    nicDlFileSize: agent.nicDlFileSize,
-    promoCode: agent.promoCode,
-    status: agent.status,
-    createdAt: agent.createdAt.toISOString(),
-    customersCount: agent._count.customers,
-  }));
+  const commissionMap = new Map<
+    string,
+    {
+      totalPayments: number;
+      commission: number;
+    }
+  >(
+    commissionTotals.map((item) => [
+      item.agentId,
+      {
+        totalPayments: item._sum.paymentAmount ?? 0,
+        commission: item._sum.commissionAmount ?? 0,
+      },
+    ]),
+  );
+
+  /*
+   * --------------------------------------------------------------------------
+   * GLOBAL STATISTICS
+   * --------------------------------------------------------------------------
+   */
+
+  const [
+    totalAgents,
+    activeAgents,
+    blockedAgents,
+    referredCustomers,
+    totalCommissionSummary,
+  ] = await Promise.all([
+    prisma.agent.count(),
+
+    prisma.agent.count({
+      where: {
+        status: AgentStatus.ACTIVE,
+      },
+    }),
+
+    prisma.agent.count({
+      where: {
+        status: AgentStatus.BLOCKED,
+      },
+    }),
+
+    prisma.user.count({
+      where: {
+        agentId: {
+          not: null,
+        },
+      },
+    }),
+
+    prisma.agentCommission.aggregate({
+      where: {
+        status: {
+          in: [AgentCommissionStatus.PENDING, AgentCommissionStatus.PAID],
+        },
+      },
+      _sum: {
+        commissionAmount: true,
+      },
+    }),
+  ]);
+
+  const totalAgentCommission =
+    totalCommissionSummary._sum.commissionAmount ?? 0;
+
+  const tableAgents = agents.map((agent) => {
+    const commissionData = commissionMap.get(agent.id);
+
+    return {
+      id: agent.id,
+      name: agent.name,
+      mobile: agent.mobile,
+      address: agent.address,
+      nicDlUrl: agent.nicDlUrl,
+      nicDlFileName: agent.nicDlFileName,
+      nicDlFileType: agent.nicDlFileType,
+      nicDlFileSize: agent.nicDlFileSize,
+      promoCode: agent.promoCode,
+      status: agent.status,
+      createdAt: agent.createdAt.toISOString(),
+      customersCount: agent._count.customers,
+
+      totalPayments: commissionData?.totalPayments ?? 0,
+      commission: commissionData?.commission ?? 0,
+    };
+  });
 
   return (
     <div className="space-y-8">
@@ -183,10 +263,22 @@ export default async function AdminAgentsPage({
             referrals
           </span>
         </div>
+
+        <Link href="/admin/agents/new">
+          <Button
+            type="button"
+            variant="default"
+            size="default"
+            className="h-10 cursor-pointer rounded-xl px-4"
+          >
+            <PlusCircle className="h-4 w-4" />
+            Create Agent
+          </Button>
+        </Link>
       </div>
 
       {/* STATISTICS */}
-      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-5">
         <StatCard
           title="Total Agents"
           value={totalAgents}
@@ -210,6 +302,15 @@ export default async function AdminAgentsPage({
           value={referredCustomers}
           icon={<UsersRound className="h-5 w-5 text-brand" />}
         />
+
+        <StatCard
+          title="Total Commission"
+          value={`LKR ${totalAgentCommission.toLocaleString("en-LK", {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+          })}`}
+          icon={<Wallet className="h-5 w-5 text-brand" />}
+        />
       </div>
 
       {/* TABLE */}
@@ -229,19 +330,27 @@ function StatCard({
   icon,
 }: {
   title: string;
-  value: number;
+  value: number | string;
   icon: React.ReactNode;
 }) {
   return (
-    <div className="h-25 rounded-xl border border-border bg-card shadow-sm">
-      <div className="flex flex-row items-center justify-between space-y-0 px-6 pt-6">
-        <span className="text-sm font-medium text-foreground">{title}</span>
+    <div className="group relative overflow-hidden rounded-2xl border border-border bg-card shadow-sm transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md">
+      <div className="absolute inset-x-0 top-0 h-1 bg-brand/70 opacity-0 transition group-hover:opacity-100" />
 
-        {icon}
+      <div className="flex items-center justify-between px-6 pt-6">
+        <span className="text-sm font-medium text-muted-foreground">
+          {title}
+        </span>
+
+        <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-secondary">
+          {icon}
+        </div>
       </div>
 
-      <div className="px-6 pt-2 pb-6">
-        <div className="text-2xl font-bold">{value}</div>
+      <div className="px-6 pb-6 pt-4">
+        <div className="truncate text-2xl font-bold tracking-tight text-foreground">
+          {value}
+        </div>
       </div>
     </div>
   );

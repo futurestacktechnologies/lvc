@@ -157,7 +157,9 @@ export default function PaymentPlanFormDialog({
         variant={isEditMode ? "outline" : "default"}
         size={isEditMode ? "sm" : "default"}
         onClick={() => setOpen(true)}
-        className={isEditMode ? "cursor-pointer" : "cursor-pointer rounded-2xl"}
+        className={
+          isEditMode ? "cursor-pointer" : "cursor-pointer h-10 px-4 rounded-xl"
+        }
       >
         {isEditMode ? (
           <>
@@ -166,7 +168,7 @@ export default function PaymentPlanFormDialog({
           </>
         ) : (
           <>
-            <PlusCircle className="mr-2 h-4 w-4" />
+            <PlusCircle className="h-4 w-4" />
             Create Plan
           </>
         )}

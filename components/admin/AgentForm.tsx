@@ -354,21 +354,20 @@ export default function AgentForm({
                 </div>
 
                 <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="cursor-pointer rounded-xl"
+                  <a
+                    href={existingDocument.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
                   >
-                    <a
-                      href={existingDocument.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="cursor-pointer rounded-xl h-10 px-4"
                     >
-                      <FileText className="mr-2 h-4 w-4" />
+                      <FileText className="h-4 w-4" />
                       View Document
-                    </a>
-                  </Button>
-
+                    </Button>
+                  </a>
                   <label className="inline-flex h-10 cursor-pointer items-center justify-center rounded-xl border border-border bg-background px-4 text-sm font-medium transition hover:bg-muted">
                     <UploadCloud className="mr-2 h-4 w-4" />
                     Replace
@@ -455,7 +454,7 @@ export default function AgentForm({
           variant="outline"
           disabled={isBusy}
           onClick={() => router.push("/admin/agents")}
-          className="cursor-pointer rounded-2xl"
+          className="cursor-pointer rounded-2xl h-10 px-4"
         >
           <ArrowLeft className="mr-2 h-4 w-4" />
           Cancel
@@ -464,7 +463,7 @@ export default function AgentForm({
         <Button
           type="submit"
           disabled={isBusy}
-          className="cursor-pointer rounded-2xl"
+          className="cursor-pointer rounded-2xl h-10 px-4"
         >
           {isBusy ? (
             <Loader2 className="mr-2 h-4 w-4 animate-spin" />

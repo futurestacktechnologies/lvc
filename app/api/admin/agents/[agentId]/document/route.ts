@@ -7,32 +7,16 @@ import { supabaseAdmin } from "@/lib/supabase/admin";
 
 export const runtime = "nodejs";
 
-const AGENT_DOCUMENT_BUCKET =
-  process.env.SUPABASE_AGENT_DOCUMENT_BUCKET || "agent-documents";
+const BUCKET = process.env.SUPABASE_AGENT_DOCUMENT_BUCKET || "agent-documents";
 
-const allowedFileTypes = [
+const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
+const ALLOWED_TYPES = new Set([
   "application/pdf",
   "image/jpeg",
   "image/png",
   "image/webp",
-];
-
-const maxFileSize = 5 * 1024 * 1024;
-
-function getFileExtension(fileName: string, fileType: string) {
-  const extensionFromName = fileName.split(".").pop();
-
-  if (extensionFromName && extensionFromName.length <= 5) {
-    return extensionFromName.toLowerCase();
-  }
-
-  if (fileType === "application/pdf") return "pdf";
-  if (fileType === "image/jpeg") return "jpg";
-  if (fileType === "image/png") return "png";
-  if (fileType === "image/webp") return "webp";
-
-  return "bin";
-}
+]);
 
 type RouteContext = {
   params: Promise<{
@@ -40,19 +24,43 @@ type RouteContext = {
   }>;
 };
 
+function getExtension(fileName: string, contentType: string) {
+  const originalExtension = fileName.split(".").pop()?.toLowerCase();
+
+  if (
+    originalExtension &&
+    ["pdf", "jpg", "jpeg", "png", "webp"].includes(originalExtension)
+  ) {
+    return originalExtension === "jpeg" ? "jpg" : originalExtension;
+  }
+
+  switch (contentType) {
+    case "application/pdf":
+      return "pdf";
+    case "image/jpeg":
+      return "jpg";
+    case "image/png":
+      return "png";
+    case "image/webp":
+      return "webp";
+    default:
+      return "bin";
+  }
+}
+
 export async function POST(request: Request, context: RouteContext) {
   try {
-    // --------------------------------------------------
+    // ---------------------------------------------------------
     // 1. ADMIN AUTHENTICATION
-    // --------------------------------------------------
+    // ---------------------------------------------------------
 
     await requireAdminUser();
 
     const { agentId } = await context.params;
 
-    // --------------------------------------------------
+    // ---------------------------------------------------------
     // 2. FIND AGENT + CURRENT DOCUMENT
-    // --------------------------------------------------
+    // ---------------------------------------------------------
 
     const agent = await prisma.agent.findUnique({
       where: {
@@ -61,9 +69,6 @@ export async function POST(request: Request, context: RouteContext) {
       select: {
         id: true,
         nicDlUrl: true,
-        nicDlFileName: true,
-        nicDlFileType: true,
-        nicDlFileSize: true,
       },
     });
 
@@ -77,178 +82,199 @@ export async function POST(request: Request, context: RouteContext) {
       );
     }
 
-    // Keep the old storage path before replacing it.
-    const oldDocumentPath = agent.nicDlUrl;
-
-    // --------------------------------------------------
+    // ---------------------------------------------------------
     // 3. READ UPLOADED FILE
-    // --------------------------------------------------
+    // ---------------------------------------------------------
 
     const formData = await request.formData();
-    const fileValue = formData.get("file");
+    const file = formData.get("file");
 
-    if (!(fileValue instanceof File)) {
+    if (!(file instanceof File)) {
       return NextResponse.json(
         {
           success: false,
-          message: "NIC/DL document is required.",
+          message: "Please select a document.",
         },
         { status: 400 },
       );
     }
 
-    // --------------------------------------------------
+    // ---------------------------------------------------------
     // 4. VALIDATE FILE TYPE
-    // --------------------------------------------------
+    // ---------------------------------------------------------
 
-    if (!allowedFileTypes.includes(fileValue.type)) {
+    if (!ALLOWED_TYPES.has(file.type)) {
       return NextResponse.json(
         {
           success: false,
-          message: "Please upload a PDF, JPG, PNG, or WebP file.",
+          message: "Only PDF, JPEG, PNG, and WebP files are allowed.",
         },
         { status: 400 },
       );
     }
 
-    // --------------------------------------------------
+    // ---------------------------------------------------------
     // 5. VALIDATE FILE SIZE
-    // --------------------------------------------------
+    // ---------------------------------------------------------
 
-    if (fileValue.size > maxFileSize) {
+    if (file.size <= 0) {
       return NextResponse.json(
         {
           success: false,
-          message: "Document must be less than 5MB.",
+          message: "The selected document is empty.",
         },
         { status: 400 },
       );
     }
 
-    // --------------------------------------------------
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Document size must not exceed 5 MB.",
+        },
+        { status: 400 },
+      );
+    }
+
+    // ---------------------------------------------------------
     // 6. CREATE NEW STORAGE PATH
-    // --------------------------------------------------
+    // ---------------------------------------------------------
 
-    const extension = getFileExtension(fileValue.name, fileValue.type);
+    const extension = getExtension(file.name, file.type);
 
-    const randomName = crypto.randomBytes(8).toString("hex");
+    const randomName = crypto.randomBytes(16).toString("hex");
 
-    const storagePath = `agents/${agentId}/${Date.now()}-${randomName}.${extension}`;
+    const newStoragePath = `agents/${agentId}/${Date.now()}-${randomName}.${extension}`;
 
-    const fileBuffer = Buffer.from(await fileValue.arrayBuffer());
+    const fileBuffer = Buffer.from(await file.arrayBuffer());
 
-    // --------------------------------------------------
-    // 7. UPLOAD NEW DOCUMENT
-    // --------------------------------------------------
+    // Keep the old path before changing the database.
+    const oldStoragePath = agent.nicDlUrl;
 
-    const uploadResult = await supabaseAdmin.storage
-      .from(AGENT_DOCUMENT_BUCKET)
-      .upload(storagePath, fileBuffer, {
-        contentType: fileValue.type,
+    // ---------------------------------------------------------
+    // 7. UPLOAD NEW DOCUMENT FIRST
+    // ---------------------------------------------------------
+
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from(BUCKET)
+      .upload(newStoragePath, fileBuffer, {
+        contentType: file.type,
         upsert: false,
       });
 
-    if (uploadResult.error) {
-      console.error("Agent document upload failed:", uploadResult.error);
+    if (uploadError) {
+      console.error("Agent document upload failed:", uploadError);
 
       return NextResponse.json(
         {
           success: false,
-          message: "Failed to upload agent document.",
+          message: "Failed to upload the new document.",
         },
         { status: 500 },
       );
     }
 
-    // --------------------------------------------------
+    // ---------------------------------------------------------
     // 8. UPDATE DATABASE
-    // --------------------------------------------------
-
-    let updatedAgent;
+    // ---------------------------------------------------------
 
     try {
-      updatedAgent = await prisma.agent.update({
+      await prisma.agent.update({
         where: {
           id: agentId,
         },
         data: {
-          nicDlUrl: storagePath,
-          nicDlFileName: fileValue.name,
-          nicDlFileType: fileValue.type,
-          nicDlFileSize: fileValue.size,
-        },
-        select: {
-          id: true,
-          name: true,
-          nicDlUrl: true,
-          nicDlFileName: true,
-          nicDlFileType: true,
-          nicDlFileSize: true,
+          nicDlUrl: newStoragePath,
+          nicDlFileName: file.name,
+          nicDlFileType: file.type,
+          nicDlFileSize: file.size,
         },
       });
     } catch (databaseError) {
-      // --------------------------------------------------
-      // DATABASE UPDATE FAILED
-      // --------------------------------------------------
-      // Remove the newly uploaded file so we don't create
-      // an orphaned file in Supabase.
-
       console.error("Agent document database update failed:", databaseError);
 
-      const rollbackResult = await supabaseAdmin.storage
-        .from(AGENT_DOCUMENT_BUCKET)
-        .remove([storagePath]);
+      // Prisma failed.
+      // Delete the NEW upload because the database
+      // still points to the OLD document.
+      const { error: cleanupError } = await supabaseAdmin.storage
+        .from(BUCKET)
+        .remove([newStoragePath]);
 
-      if (rollbackResult.error) {
+      if (cleanupError) {
         console.error(
-          "Failed to rollback newly uploaded agent document:",
-          rollbackResult.error,
+          "Failed to clean up newly uploaded document:",
+          cleanupError,
         );
       }
 
       return NextResponse.json(
         {
           success: false,
-          message: "Failed to save the new agent document.",
+          message: "Failed to save the new document.",
         },
         { status: 500 },
       );
     }
 
-    // --------------------------------------------------
+    // ---------------------------------------------------------
     // 9. DELETE OLD DOCUMENT
-    // --------------------------------------------------
+    // ---------------------------------------------------------
 
-    if (oldDocumentPath && oldDocumentPath !== storagePath) {
-      const deleteResult = await supabaseAdmin.storage
-        .from(AGENT_DOCUMENT_BUCKET)
-        .remove([oldDocumentPath]);
+    let oldDocumentDeleted = true;
 
-      if (deleteResult.error) {
-        // The replacement itself succeeded.
-        // We only log the cleanup failure.
-        console.error(
-          "Failed to delete old agent document:",
-          deleteResult.error,
-          {
-            agentId,
-            oldDocumentPath,
-          },
-        );
+    if (oldStoragePath && oldStoragePath !== newStoragePath) {
+      const { error: deleteError } = await supabaseAdmin.storage
+        .from(BUCKET)
+        .remove([oldStoragePath]);
+
+      if (deleteError) {
+        oldDocumentDeleted = false;
+
+        console.error("Failed to delete old agent document:", deleteError);
       }
     }
 
-    // --------------------------------------------------
-    // 10. RETURN SUCCESS
-    // --------------------------------------------------
+    // ---------------------------------------------------------
+    // 10. RESPONSE
+    // ---------------------------------------------------------
 
     return NextResponse.json({
       success: true,
-      message: "Agent document uploaded successfully.",
-      agent: updatedAgent,
+      message: oldDocumentDeleted
+        ? "Verification document replaced successfully."
+        : "Verification document updated, but the previous document could not be removed.",
+      document: {
+        fileName: file.name,
+        fileType: file.type,
+        fileSize: file.size,
+      },
+      cleanup: {
+        oldDocumentDeleted,
+      },
     });
   } catch (error) {
-    console.error("Agent document upload failed:", error);
+    console.error("Admin agent document upload failed:", error);
+
+    if (error instanceof Error && error.message === "UNAUTHORIZED") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Unauthorized.",
+        },
+        { status: 401 },
+      );
+    }
+
+    if (error instanceof Error && error.message === "FORBIDDEN") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "You do not have permission to perform this action.",
+        },
+        { status: 403 },
+      );
+    }
 
     return NextResponse.json(
       {

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
+import { agentStatusSchema } from "@/lib/validations/agent";
 import { requireAdminUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma/client";
 
@@ -35,7 +35,7 @@ const updateAgentSchema = z.object({
       "Promo code can only contain letters, numbers, hyphens, and underscores.",
     ),
 
-  status: z.enum(["ACTIVE", "INACTIVE", "BLOCKED"]),
+  status: agentStatusSchema,
 });
 
 type RouteContext = {

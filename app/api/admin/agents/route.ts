@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 
-import { requireAdminUser } from "@/lib/auth/admin";
+import { requireAdminUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma/client";
 import { AgentStatus, Prisma } from "@/generated/prisma";
 

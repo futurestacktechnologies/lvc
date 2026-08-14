@@ -99,6 +99,12 @@ enum AgentStatus {
   BLOCKED
 }
 
+enum AgentCommissionStatus {
+  PENDING
+  PAID
+  CANCELLED
+}
+
 model User {
   id                           String                @id @default(cuid())
   name                         String
@@ -125,6 +131,7 @@ model User {
   assignedSupportConversations SupportConversation[] @relation("AssignedSupportConversations")
   supportMessages              SupportMessage[]      @relation("SupportMessageSender")
   notifications                Notification[]
+  agentCommissions             AgentCommission[]     @relation("AgentCommissions")
   createdAt                    DateTime              @default(now())
   updatedAt                    DateTime              @updatedAt
 
@@ -144,13 +151,74 @@ model Agent {
   nicDlFileSize Int?
   promoCode     String      @unique
   status        AgentStatus @default(ACTIVE)
+
   customers     User[]
+  commissions   AgentCommission[]
+  payouts       AgentPayout[]
+
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
   @@index([mobile])
   @@index([status])
   @@map("agents")
+}
+
+model AgentCommission {
+  id String @id @default(cuid())
+
+  agentId String
+  agent   Agent @relation(fields: [agentId], references: [id], onDelete: Restrict)
+
+  customerId String
+  customer   User @relation("AgentCommissions", fields: [customerId], references: [id], onDelete: Restrict)
+
+  paymentId String @unique
+  payment   Payment @relation(fields: [paymentId], references: [id], onDelete: Restrict)
+
+  payoutId String?
+  payout   AgentPayout? @relation(fields: [payoutId], references: [id], onDelete: SetNull)
+
+  paymentAmount    Int
+  commissionRate   Float
+  commissionAmount Int
+
+  status AgentCommissionStatus @default(PENDING)
+
+  paidAt          DateTime?
+  payoutReference String?
+  adminNote       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([agentId])
+  @@index([customerId])
+  @@index([status])
+  @@index([payoutId])
+  @@index([createdAt])
+  @@map("agent_commissions")
+}
+
+model AgentPayout {
+  id String @id @default(cuid())
+
+  agentId String
+  agent   Agent @relation(fields: [agentId], references: [id], onDelete: Restrict)
+
+  commissions AgentCommission[]
+
+  amount Int
+
+  paymentReference String?
+  note             String?
+
+  paidAt    DateTime @default(now())
+  createdAt DateTime @default(now())
+
+  @@index([agentId])
+  @@index([paidAt])
+  @@map("agent_payouts")
 }
 
 model OtpCode {
@@ -282,6 +350,8 @@ model Payment {
   verifiedById String?
   verifiedBy   User?     @relation("VerifiedPayments", fields: [verifiedById], references: [id], onDelete: SetNull)
   verifiedAt   DateTime?
+
+  commission AgentCommission?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

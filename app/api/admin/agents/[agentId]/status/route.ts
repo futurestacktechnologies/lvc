@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-
+import { agentStatusSchema } from "@/lib/validations/agent";
 import { requireAdminUser } from "@/lib/auth/current-user";
 import { prisma } from "@/lib/prisma/client";
 import { AgentStatus } from "@/generated/prisma";
@@ -8,7 +8,7 @@ import { AgentStatus } from "@/generated/prisma";
 export const runtime = "nodejs";
 
 const updateStatusSchema = z.object({
-  status: z.enum(["ACTIVE", "INACTIVE", "BLOCKED"]),
+  status: agentStatusSchema,
 });
 
 type RouteContext = {
