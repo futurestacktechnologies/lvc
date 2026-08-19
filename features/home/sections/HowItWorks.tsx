@@ -1,3 +1,6 @@
+"use client";
+
+import { motion } from "motion/react";
 import {
   Car,
   CreditCard,
@@ -49,31 +52,114 @@ const steps = [
   },
 ];
 
+const sectionVariants = {
+  hidden: {},
+  visible: {
+    transition: {
+      staggerChildren: 0.12,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: {
+    opacity: 0,
+    y: 35,
+  },
+  visible: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      duration: 0.6,
+      ease: [0.22, 1, 0.36, 1] as const,
+    },
+  },
+};
+
 export default function HowItWorks() {
   return (
-    <section id="how-it-works" className="bg-background py-20 lg:py-24">
-      <Container>
-        <SectionHeader
-          badge="Simple Process"
-          title="How your vehicle report request works"
-          description="A clear step-by-step process designed for customers who want reliable Japanese vehicle history information without confusion."
-        />
+    <section
+      id="how-it-works"
+      className="scroll-mt-10 relative overflow-hidden bg-background py-12 lg:py-16"
+    >
+      {/* Subtle background glow */}
+      <motion.div
+        initial={{ opacity: 0, scale: 0.8 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{
+          duration: 1,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+        className="pointer-events-none absolute left-1/2 top-20 -z-10 h-72 w-72 -translate-x-1/2 rounded-full bg-brand/5 blur-3xl"
+      />
 
-        <div className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <Container>
+        {/* Section heading */}
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{
+            once: true,
+            amount: 0.25,
+          }}
+          variants={sectionVariants}
+        >
+          <motion.div variants={itemVariants}>
+            <SectionHeader
+              badge="Simple Process"
+              title="How your vehicle report request works"
+              description="A clear step-by-step process designed for customers who want reliable Japanese vehicle history information without confusion."
+            />
+          </motion.div>
+        </motion.div>
+
+        {/* Steps */}
+        <motion.div
+          initial="hidden"
+          whileInView="visible"
+          viewport={{
+            once: true,
+            amount: 0.12,
+          }}
+          variants={sectionVariants}
+          className="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-3"
+        >
           {steps.map((step, index) => {
             const Icon = step.icon;
 
             return (
-              <div
+              <motion.div
                 key={step.title}
-                className="group relative rounded-3xl border border-border bg-card p-6 shadow-sm transition hover:-translate-y-1 hover:shadow-xl"
+                variants={itemVariants}
+                whileHover={{
+                  y: -8,
+                  transition: {
+                    duration: 0.25,
+                  },
+                }}
+                className="group relative rounded-3xl border border-border bg-card p-6 shadow-sm transition-shadow duration-300 hover:shadow-xl"
               >
-                <div className="mb-6 flex items-center justify-between">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-brand transition group-hover:bg-brand group-hover:text-brand-foreground">
-                    <Icon className="h-6 w-6" />
-                  </div>
+                {/* Step connector */}
+                {index < steps.length - 1 && (
+                  <div className="pointer-events-none absolute right-[-1.5rem] top-1/2 hidden h-px w-6 bg-border lg:block" />
+                )}
 
-                  <span className="text-4xl font-bold text-muted">
+                <div className="mb-6 flex items-center justify-between">
+                  {/* Icon */}
+                  <motion.div
+                    whileHover={{
+                      rotate: 4,
+                      scale: 1.05,
+                    }}
+                    transition={{ duration: 0.2 }}
+                    className="flex h-14 w-14 items-center justify-center rounded-2xl bg-secondary text-brand transition-colors duration-300 group-hover:bg-brand group-hover:text-brand-foreground"
+                  >
+                    <Icon className="h-6 w-6" />
+                  </motion.div>
+
+                  {/* Step number */}
+                  <span className="text-4xl font-bold text-muted transition-colors duration-300 group-hover:text-brand/20">
                     0{index + 1}
                   </span>
                 </div>
@@ -85,10 +171,18 @@ export default function HowItWorks() {
                 <p className="mt-3 text-sm leading-7 text-muted-foreground">
                   {step.description}
                 </p>
-              </div>
+
+                {/* Bottom accent */}
+                <motion.div
+                  initial={{ width: 0 }}
+                  whileHover={{ width: "35%" }}
+                  transition={{ duration: 0.3 }}
+                  className="mt-6 h-1 rounded-full bg-brand"
+                />
+              </motion.div>
             );
           })}
-        </div>
+        </motion.div>
       </Container>
     </section>
   );

@@ -180,25 +180,43 @@ export default async function AdminPaymentsPage({
     }),
   );
 
-  const [totalPayments, pendingCount] = await Promise.all([
-    prisma.payment.count({
-      where: {
-        method: {
-          in: [PaymentMethod.BANK_TRANSFER, PaymentMethod.ONLINE_GATEWAY],
+  const [totalPayments, pendingCount, verifiedPaymentsSummary] =
+    await Promise.all([
+      prisma.payment.count({
+        where: {
+          method: {
+            in: [PaymentMethod.BANK_TRANSFER, PaymentMethod.ONLINE_GATEWAY],
+          },
         },
-      },
-    }),
-    prisma.payment.count({
-      where: {
-        method: {
-          in: [PaymentMethod.BANK_TRANSFER, PaymentMethod.ONLINE_GATEWAY],
+      }),
+
+      prisma.payment.count({
+        where: {
+          method: {
+            in: [PaymentMethod.BANK_TRANSFER, PaymentMethod.ONLINE_GATEWAY],
+          },
+          status: {
+            in: [PaymentStatus.PROOF_UPLOADED, PaymentStatus.PENDING],
+          },
         },
-        status: {
-          in: [PaymentStatus.PROOF_UPLOADED, PaymentStatus.PENDING],
+      }),
+
+      prisma.payment.aggregate({
+        where: {
+          method: {
+            in: [PaymentMethod.BANK_TRANSFER, PaymentMethod.ONLINE_GATEWAY],
+          },
+          status: {
+            in: [PaymentStatus.VERIFIED, PaymentStatus.PAID],
+          },
         },
-      },
-    }),
-  ]);
+        _sum: {
+          amount: true,
+        },
+      }),
+    ]);
+
+  const totalVerifiedAmount = verifiedPaymentsSummary._sum.amount ?? 0;
 
   const tablePayments = paymentsWithProofUrls.map((payment) => ({
     id: payment.id,
@@ -236,6 +254,7 @@ export default async function AdminPaymentsPage({
             </CardTitle>
             <ShieldCheck className="h-5 w-5 text-brand" />
           </CardHeader>
+
           <CardContent>
             <div className="text-2xl font-bold">{pendingCount}</div>
           </CardContent>
@@ -248,8 +267,28 @@ export default async function AdminPaymentsPage({
             </CardTitle>
             <FileText className="h-5 w-5 text-brand" />
           </CardHeader>
+
           <CardContent>
             <div className="text-2xl font-bold">{totalPayments}</div>
+          </CardContent>
+        </Card>
+
+        <Card className="h-25">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0">
+            <CardTitle className="text-sm font-medium">
+              Verified Payment Amount
+            </CardTitle>
+            <ShieldCheck className="h-5 w-5 text-brand" />
+          </CardHeader>
+
+          <CardContent>
+            <div className="text-2xl font-bold">
+              LKR{" "}
+              {totalVerifiedAmount.toLocaleString("en-LK", {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+            </div>
           </CardContent>
         </Card>
       </div>

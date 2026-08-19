@@ -3,6 +3,7 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { motion } from "motion/react";
 import Container from "@/components/layout/Container";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -149,37 +150,144 @@ export default function Hero({}: HeroProps) {
     }
   }
   return (
-    <section className="relative overflow-hidden bg-background">
+    <section
+      id="/"
+      className="scroll-mt-16 relative overflow-hidden bg-background"
+    >
       {/* Background with gradient and glow */}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-indigo-50/50 via-background to-background" />
-      <div className="absolute -top-24 -right-24 h-96 w-96 rounded-full bg-brand/10 blur-3xl" />
-      <div className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-amber-200/20 blur-3xl" />
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 1 }}
+        className="absolute inset-0 -z-10 bg-gradient-to-b from-indigo-50/50 via-background to-background"
+      />
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.85 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{
+          duration: 1.2,
+          delay: 0.1,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+        className="absolute -right-24 -top-24 h-96 w-96 rounded-full bg-brand/10 blur-3xl"
+      />
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.85 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{
+          duration: 1.2,
+          delay: 0.25,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+        className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-amber-200/20 blur-3xl"
+      />
 
       <Container className="pt-8 lg:pt-12 pb-12 lg:pb-16">
         <div className="grid items-center gap-16 lg:grid-cols-2">
           {/* Left Content */}
-          <div className="max-w-2xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-secondary bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm backdrop-blur-sm">
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={{
+              hidden: {},
+              visible: {
+                transition: {
+                  staggerChildren: 0.12,
+                },
+              },
+            }}
+            className="max-w-2xl"
+          >
+            <motion.div
+              variants={{
+                hidden: {
+                  opacity: 0,
+                  y: 16,
+                },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    duration: 0.55,
+                    ease: [0.22, 1, 0.36, 1],
+                  },
+                },
+              }}
+              className="inline-flex items-center gap-2 rounded-full border border-secondary bg-white/80 px-4 py-2 text-sm font-medium text-slate-700 shadow-sm backdrop-blur-sm"
+            >
               <span className="h-2 w-2 rounded-full bg-brand" />
               Japan Vehicle History Reports
-            </div>
+            </motion.div>
 
-            <h1 className="mt-7 text-4xl font-extrabold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl lg:leading-[1.08]">
+            <motion.h1
+              variants={{
+                hidden: {
+                  opacity: 0,
+                  y: 24,
+                },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    duration: 0.7,
+                    ease: [0.22, 1, 0.36, 1],
+                  },
+                },
+              }}
+              className="mt-7 text-4xl font-extrabold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl lg:leading-[1.08]"
+            >
+              {" "}
               Get{" "}
               <span className="bg-gradient-to-r from-brand to-indigo-400 bg-clip-text text-transparent">
                 Authentic
               </span>{" "}
               Japanese Vehicle History Reports
-            </h1>
+            </motion.h1>
 
-            <p className="mt-6 max-w-xl text-base leading-8 text-slate-600 sm:text-lg">
+            <motion.p
+              variants={{
+                hidden: {
+                  opacity: 0,
+                  y: 20,
+                },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  transition: {
+                    duration: 0.6,
+                    ease: [0.22, 1, 0.36, 1],
+                  },
+                },
+              }}
+              className="mt-6 max-w-xl text-base leading-8 text-slate-600 sm:text-lg"
+            >
               Enter your chassis number, complete the payment, and our team will
               manually verify the vehicle details before delivering a
               professional PDF report to your account.
-            </p>
-
+            </motion.p>
             {/* Search Card with glass effect */}
-            <div className="mt-8 max-w-2xl rounded-3xl border border-slate-200/80 bg-white/80 p-6 shadow-2xl shadow-slate-200/60 backdrop-blur-sm">
+            <motion.div
+              variants={{
+                hidden: {
+                  opacity: 0,
+                  y: 28,
+                  scale: 0.98,
+                },
+                visible: {
+                  opacity: 1,
+                  y: 0,
+                  scale: 1,
+                  transition: {
+                    duration: 0.7,
+                    ease: [0.22, 1, 0.36, 1],
+                  },
+                },
+              }}
+              className="mt-8 max-w-2xl rounded-3xl border border-slate-200/80 bg-white/80 p-6 shadow-2xl shadow-slate-200/60 backdrop-blur-sm"
+            >
+              {" "}
               <form onSubmit={handleVehicleSearch} className="space-y-4">
                 <div className="flex rounded-2xl bg-slate-100 p-1">
                   <button
@@ -279,18 +387,44 @@ export default function Hero({}: HeroProps) {
                   </div>
                 )}
               </form>
-
               <div className="mt-4 flex flex-col gap-3 px-1 text-sm sm:flex-row sm:items-center sm:justify-between">
                 <button className="inline-flex items-center gap-2 font-medium text-brand hover:text-indigo-700 transition-colors cursor-pointer">
                   <Download className="h-4 w-4" />
                   See report sample
                 </button>
               </div>
-            </div>
+            </motion.div>
 
             {/* Mini Cards */}
-            <div className="mt-6 grid max-w-xl gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+            <motion.div
+              variants={{
+                hidden: {},
+                visible: {
+                  transition: {
+                    staggerChildren: 0.1,
+                  },
+                },
+              }}
+              className="mt-6 grid max-w-xl gap-3 sm:grid-cols-2"
+            >
+              {" "}
+              <motion.div
+                variants={{
+                  hidden: {
+                    opacity: 0,
+                    y: 20,
+                  },
+                  visible: {
+                    opacity: 1,
+                    y: 0,
+                    transition: {
+                      duration: 0.55,
+                      ease: [0.22, 1, 0.36, 1],
+                    },
+                  },
+                }}
+                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow duration-200 hover:shadow-md"
+              >
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-secondary text-brand">
                     <ShieldCheck className="h-5 w-5" />
@@ -305,9 +439,24 @@ export default function Hero({}: HeroProps) {
                     </p>
                   </div>
                 </div>
-              </div>
-
-              <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:shadow-md transition-shadow duration-200">
+              </motion.div>
+              <motion.div
+                variants={{
+                  hidden: {
+                    opacity: 0,
+                    y: 20,
+                  },
+                  visible: {
+                    opacity: 1,
+                    y: 0,
+                    transition: {
+                      duration: 0.55,
+                      ease: [0.22, 1, 0.36, 1],
+                    },
+                  },
+                }}
+                className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-shadow duration-200 hover:shadow-md"
+              >
                 <div className="flex items-center gap-3">
                   <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
                     <Sparkles className="h-5 w-5" />
@@ -322,14 +471,37 @@ export default function Hero({}: HeroProps) {
                     </p>
                   </div>
                 </div>
-              </div>
-            </div>
-          </div>
+              </motion.div>
+            </motion.div>
+          </motion.div>
 
-          {/* Right Visual - unchanged */}
-          <div className="relative hidden min-h-[520px] lg:block">
+          {/* Right Visual */}
+          <div className="relative hidden min-h-[520px] lg:flex lg:items-center lg:justify-end">
             {/* Main Report Card */}
-            <div className="absolute left-0 top-8 w-[560px] rounded-[2rem] border border-slate-200 bg-white p-5 shadow-2xl shadow-slate-300/50">
+            <motion.div
+              initial={{
+                opacity: 0,
+                x: 70,
+                scale: 0.94,
+              }}
+              animate={{
+                opacity: 1,
+                x: 0,
+                scale: 1,
+              }}
+              transition={{
+                duration: 0.9,
+                delay: 0.35,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              whileHover={{
+                y: -6,
+                transition: {
+                  duration: 0.3,
+                },
+              }}
+              className="w-[560px] rounded-[2rem] border border-slate-200 bg-white p-4 shadow-2xl shadow-slate-300/50"
+            >
               <Image
                 src="/bg-hero.jpg"
                 alt="Vehicle report preview"
@@ -338,17 +510,47 @@ export default function Hero({}: HeroProps) {
                 className="w-full rounded-[1.5rem]"
                 priority
               />
-            </div>
+            </motion.div>
           </div>
         </div>
 
         {/* Stats */}
         <div className="mt-12">
-          <div className="grid gap-4 rounded-3xl border border-slate-200 bg-white/80 p-5 shadow-xl shadow-slate-200/60 backdrop-blur-sm md:grid-cols-2 lg:grid-cols-4">
+          <motion.div
+            initial="hidden"
+            whileInView="visible"
+            viewport={{
+              once: true,
+              amount: 0.15,
+            }}
+            variants={{
+              hidden: {},
+              visible: {
+                transition: {
+                  staggerChildren: 0.1,
+                },
+              },
+            }}
+            className="grid gap-4 rounded-3xl border border-slate-200 bg-white/80 p-5 shadow-xl shadow-slate-200/60 backdrop-blur-sm md:grid-cols-2 lg:grid-cols-4"
+          >
             {stats.map((item) => {
               const Icon = item.icon;
               return (
-                <div
+                <motion.div
+                  variants={{
+                    hidden: {
+                      opacity: 0,
+                      y: 20,
+                    },
+                    visible: {
+                      opacity: 1,
+                      y: 0,
+                      transition: {
+                        duration: 0.5,
+                        ease: [0.22, 1, 0.36, 1],
+                      },
+                    },
+                  }}
                   key={item.label}
                   className="flex items-center gap-4 rounded-2xl p-3 lg:border-r lg:border-slate-100 lg:last:border-r-0"
                 >
@@ -362,10 +564,10 @@ export default function Hero({}: HeroProps) {
                     <p className="font-semibold text-slate-950">{item.label}</p>
                     <p className="text-sm text-slate-500">{item.text}</p>
                   </div>
-                </div>
+                </motion.div>
               );
             })}
-          </div>
+          </motion.div>
         </div>
       </Container>
     </section>

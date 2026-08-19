@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { motion } from "motion/react";
 import { Phone, Tag, UserRound } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -11,6 +12,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { registerSchema, type RegisterInput } from "@/lib/validations/auth";
+
+const ease = [0.22, 1, 0.36, 1] as const;
 
 export default function RegisterForm() {
   const router = useRouter();
@@ -64,8 +67,24 @@ export default function RegisterForm() {
   }
 
   return (
-    <div className="rounded-[2rem] border border-border bg-card p-8 shadow-xl shadow-slate-200/70">
-      <div>
+    <motion.div
+      initial={{ opacity: 0, y: 24, scale: 0.98 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{
+        duration: 0.65,
+        ease,
+      }}
+      className="rounded-[2rem] border border-border bg-card p-8 shadow-xl shadow-slate-200/70"
+    >
+      <motion.div
+        initial={{ opacity: 0, y: 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{
+          duration: 0.5,
+          delay: 0.08,
+          ease,
+        }}
+      >
         <p className="text-sm font-semibold text-brand">Create account</p>
 
         <h1 className="mt-3 text-3xl font-bold tracking-tight text-foreground">
@@ -76,10 +95,40 @@ export default function RegisterForm() {
           Create an account using your name and mobile number. We&apos;ll verify
           your number using OTP.
         </p>
-      </div>
+      </motion.div>
 
-      <form onSubmit={handleSubmit(onSubmit)} className="mt-8 space-y-5">
-        <div className="space-y-2">
+      <motion.form
+        onSubmit={handleSubmit(onSubmit)}
+        className="mt-8 space-y-5"
+        initial="hidden"
+        animate="visible"
+        variants={{
+          hidden: {},
+          visible: {
+            transition: {
+              staggerChildren: 0.08,
+              delayChildren: 0.18,
+            },
+          },
+        }}
+      >
+        <motion.div
+          variants={{
+            hidden: {
+              opacity: 0,
+              y: 12,
+            },
+            visible: {
+              opacity: 1,
+              y: 0,
+              transition: {
+                duration: 0.45,
+                ease,
+              },
+            },
+          }}
+          className="space-y-2"
+        >
           <Label htmlFor="name">Full name</Label>
 
           <div className="relative">
@@ -88,7 +137,7 @@ export default function RegisterForm() {
             <Input
               id="name"
               placeholder="Your full name"
-              className="h-12 pl-11"
+              className="h-12 pl-11 transition-all duration-200 focus:ring-2 focus:ring-brand/20"
               {...register("name")}
             />
           </div>
@@ -98,9 +147,25 @@ export default function RegisterForm() {
               {errors.name.message}
             </p>
           )}
-        </div>
+        </motion.div>
 
-        <div className="space-y-2">
+        <motion.div
+          variants={{
+            hidden: {
+              opacity: 0,
+              y: 12,
+            },
+            visible: {
+              opacity: 1,
+              y: 0,
+              transition: {
+                duration: 0.45,
+                ease,
+              },
+            },
+          }}
+          className="space-y-2"
+        >
           <Label htmlFor="phone">Mobile number</Label>
 
           <div className="relative">
@@ -110,7 +175,7 @@ export default function RegisterForm() {
               id="phone"
               type="tel"
               placeholder="+94 77 123 4567"
-              className="h-12 pl-11"
+              className="h-12 pl-11 transition-all duration-200 focus:ring-2 focus:ring-brand/20"
               {...register("phone")}
             />
           </div>
@@ -120,9 +185,25 @@ export default function RegisterForm() {
               {errors.phone.message}
             </p>
           )}
-        </div>
+        </motion.div>
 
-        <div className="space-y-2">
+        <motion.div
+          variants={{
+            hidden: {
+              opacity: 0,
+              y: 12,
+            },
+            visible: {
+              opacity: 1,
+              y: 0,
+              transition: {
+                duration: 0.45,
+                ease,
+              },
+            },
+          }}
+          className="space-y-2"
+        >
           <Label htmlFor="promoCode">
             Promo Code <span className="text-muted-foreground">(Optional)</span>
           </Label>
@@ -133,7 +214,7 @@ export default function RegisterForm() {
             <Input
               id="promoCode"
               placeholder="Enter Promo Code if you have one"
-              className="h-12 pl-11 uppercase"
+              className="h-12 pl-11 uppercase transition-all duration-200 focus:ring-2 focus:ring-brand/20"
               {...register("promoCode")}
             />
           </div>
@@ -143,18 +224,43 @@ export default function RegisterForm() {
               {errors.promoCode.message}
             </p>
           )}
-        </div>
+        </motion.div>
 
-        <Button
-          type="submit"
-          disabled={isSubmitting}
-          className="h-12 w-full text-base cursor-pointer"
+        <motion.div
+          variants={{
+            hidden: {
+              opacity: 0,
+              y: 12,
+            },
+            visible: {
+              opacity: 1,
+              y: 0,
+              transition: {
+                duration: 0.45,
+                ease,
+              },
+            },
+          }}
         >
-          {isSubmitting ? "Sending OTP..." : "Create Account"}
-        </Button>
-      </form>
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="h-12 w-full cursor-pointer text-base transition-all duration-300 hover:-translate-y-0.5 hover:shadow-lg hover:shadow-brand/20"
+          >
+            {isSubmitting ? "Sending OTP..." : "Create Account"}
+          </Button>
+        </motion.div>
+      </motion.form>
 
-      <p className="mt-6 text-center text-sm text-muted-foreground">
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{
+          duration: 0.5,
+          delay: 0.55,
+        }}
+        className="mt-6 text-center text-sm text-muted-foreground"
+      >
         Already have an account?{" "}
         <Link
           href="/login"
@@ -162,7 +268,7 @@ export default function RegisterForm() {
         >
           Login
         </Link>
-      </p>
-    </div>
+      </motion.p>
+    </motion.div>
   );
 }

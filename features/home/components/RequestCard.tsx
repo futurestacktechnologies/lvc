@@ -1,4 +1,4 @@
-"use client"; // already client
+"use client";
 
 import { ArrowRight, FileText, ShieldCheck } from "lucide-react";
 

@@ -1,7 +1,7 @@
 type SendOtpSmsArgs = {
   phone: string;
   otp: string;
-  purpose: "LOGIN" | "SIGNUP";
+  purpose: "SIGNUP" | "LOGIN" | "PHONE_CHANGE_OLD" | "PHONE_CHANGE_NEW";
 };
 
 function formatNotifyPhone(phone: string) {
